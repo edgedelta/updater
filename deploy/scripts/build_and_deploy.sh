@@ -8,11 +8,16 @@ registry="public.ecr.aws/v4z2v9g0/edgedelta-development"
 api_url="https://api.edgedelta.com/v1"
 endpoint="/versioning/latest"
 
-# "local" is to run the updater with a test API
-if [[ "$ED_MODE" -eq "local" ]]; then
+if [ "$ED_MODE" = "local-test" ]; then
+    # To run the updater with the test API:
+    #   `go run test/api/main.go`
     api_url="http://host.minikube.internal:8080"
     endpoint="/"
-elif [[ "$ED_MODE" -eq "staging" ]]; then
+elif [ "$ED_MODE" = "local" ]; then
+    # To run the updater with the admin API locally:
+    #   `ED_MODE=staging ED_SECRET_PROVIDER=kms go run cmd/admin/main.go`
+    api_url="http://host.minikube.internal:4444"
+elif [ "$ED_MODE" = "staging" ]; then
     api_url="https://api.staging.edgedelta.com/v1"
 fi
 
