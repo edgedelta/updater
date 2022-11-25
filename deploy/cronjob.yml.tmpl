@@ -1,0 +1,28 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: edgedelta-updater
+  namespace: edgedelta
+spec:
+  schedule: "*/5 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: edgedelta-updater-container
+            image: {IMAGE_URI}
+            env:
+            - name: ED_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: ed-api-key
+                  name: ed-api-key
+            - name: ED_API_URL
+              value: {ED_API_URL}
+            - name: ED_LATEST_TAG_ENDPOINT
+              value: {ED_LATEST_TAG_ENDPOINT}
+            imagePullPolicy: Always
+            command:
+            - /ko-app/updater
+          restartPolicy: Never

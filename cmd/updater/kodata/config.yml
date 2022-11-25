@@ -1,0 +1,12 @@
+entities:
+- id: '{{ .env.ED_API_KEY }}'
+  image: edgedelta
+  paths:
+  - edgedelta:ds/edgedelta:spec.template.spec.containers[0].image
+api:
+  base_url: '{{ .env.ED_API_URL }}'
+  latest_tag:
+    endpoint: '{{ .env.ED_LATEST_TAG_ENDPOINT }}'
+    auth:
+      header_key: X-ED-API-Token
+      header_value: '{{ .env.ED_API_KEY }}'
