@@ -111,10 +111,16 @@ func (u *Updater) EvaluateConfigVars(ctx context.Context) (err error) {
 			return
 		}
 	}
+	if u.config.API.BaseURL, err = u.evaluateConfigVar(ctx, u.config.API.BaseURL); err != nil {
+		return
+	}
 	if u.config.API.TopLevelAuth != nil {
 		if u.config.API.TopLevelAuth.HeaderValue, err = u.evaluateConfigVar(ctx, u.config.API.TopLevelAuth.HeaderValue); err != nil {
 			return
 		}
+	}
+	if u.config.API.LatestTagEndpoint.Endpoint, err = u.evaluateConfigVar(ctx, u.config.API.LatestTagEndpoint.Endpoint); err != nil {
+		return
 	}
 	if u.config.API.LatestTagEndpoint.Params != nil {
 		for k, v := range u.config.API.LatestTagEndpoint.Params.QueryParams {
@@ -128,11 +134,13 @@ func (u *Updater) EvaluateConfigVars(ctx context.Context) (err error) {
 			}
 		}
 	}
-	if u.config.API.BaseURL, err = u.evaluateConfigVar(ctx, u.config.API.BaseURL); err != nil {
-		return
-	}
-	if u.config.API.LatestTagEndpoint.Endpoint, err = u.evaluateConfigVar(ctx, u.config.API.LatestTagEndpoint.Endpoint); err != nil {
-		return
+	if u.config.API.LatestTagEndpoint.Auth != nil {
+		if u.config.API.LatestTagEndpoint.Auth.HeaderKey, err = u.evaluateConfigVar(ctx, u.config.API.LatestTagEndpoint.Auth.HeaderKey); err != nil {
+			return
+		}
+		if u.config.API.LatestTagEndpoint.Auth.HeaderValue, err = u.evaluateConfigVar(ctx, u.config.API.LatestTagEndpoint.Auth.HeaderValue); err != nil {
+			return
+		}
 	}
 	return nil
 }

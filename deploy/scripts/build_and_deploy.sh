@@ -16,7 +16,7 @@ if [ "$ED_MODE" = "local-test" ]; then
 elif [ "$ED_MODE" = "local" ]; then
     # To run the updater with the admin API locally:
     #   `ED_MODE=staging ED_SECRET_PROVIDER=kms go run cmd/admin/main.go`
-    api_url="http://host.minikube.internal:4444"
+    api_url="http://host.minikube.internal:4444/v1"
 elif [ "$ED_MODE" = "staging" ]; then
     api_url="https://api.staging.edgedelta.com/v1"
 fi

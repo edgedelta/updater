@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"text/template"
@@ -35,6 +36,12 @@ func (c *Client) GetLatestApplicableTag(id string) (*core.LatestTagResponse, err
 	if err != nil {
 		return nil, err
 	}
+	if c.conf.TopLevelAuth != nil {
+		req.Header.Add(c.conf.TopLevelAuth.HeaderKey, c.conf.TopLevelAuth.HeaderValue)
+	}
+	if c.conf.LatestTagEndpoint.Auth != nil {
+		req.Header.Add(c.conf.LatestTagEndpoint.Auth.HeaderKey, c.conf.LatestTagEndpoint.Auth.HeaderValue)
+	}
 	res, err := c.cl.Do(req)
 	if err != nil {
 		return nil, err
@@ -43,6 +50,9 @@ func (c *Client) GetLatestApplicableTag(id string) (*core.LatestTagResponse, err
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
+	}
+	if res.StatusCode != 200 {
+		return nil, fmt.Errorf("API returned %d, response body: %s", res.StatusCode, string(data))
 	}
 	var r core.LatestTagResponse
 	if err := json.Unmarshal(data, &r); err != nil {
