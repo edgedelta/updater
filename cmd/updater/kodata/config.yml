@@ -1,5 +1,5 @@
 entities:
-- id: '{{ .env.ED_API_KEY }}'
+- id: '{{ .k8s.secrets.edgedelta.ed-api-key }}'
   image: edgedelta
   paths:
   - edgedelta:ds/edgedelta:spec.template.spec.containers[0].image
@@ -9,4 +9,4 @@ api:
     endpoint: '{{ .env.ED_LATEST_TAG_ENDPOINT }}'
     auth:
       header_key: X-ED-Config-Id
-      header_value: '{{ .env.ED_API_KEY }}'
+      header_value: '{{ .k8s.secrets.edgedelta.ed-api-key }}'
