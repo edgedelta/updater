@@ -7,3 +7,6 @@ rules:
 - apiGroups: ["apps"]
   resources: ["daemonsets"]
   verbs: ["get", "list", "update"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list"]
