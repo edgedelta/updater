@@ -3,6 +3,7 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/edgedelta/updater/core"
 
@@ -60,10 +61,10 @@ func (c *Client) SetResourceKeyValue(ctx context.Context, path core.K8sResourceP
 		if ds == nil {
 			return fmt.Errorf("no DaemonSet exists with name %s in namespace %s", res.Name, res.Namespace)
 		}
-
-		// TODO: Make this generic by using SetStructFieldValue()
-		ds.Spec.Template.Spec.Containers[0].Image = updateValue
-
+		fieldSelectorPath := strings.Split(res.UpdateKeyPath, ".")
+		if err := SetStructFieldValue(ds, fieldSelectorPath, updateValue); err != nil {
+			return fmt.Errorf("failed to set fieldpath '%s' of DaemonSet, err: %v", res.UpdateKeyPath, err)
+		}
 		_, err = c.clientset.AppsV1().DaemonSets(res.Namespace).Update(ctx, ds, v1.UpdateOptions{})
 		if err != nil {
 			return fmt.Errorf("failed to update the DaemonSet with new value %+v, err: %v", ds, err)
