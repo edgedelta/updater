@@ -2,6 +2,7 @@ package updater
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -76,6 +77,9 @@ func NewUpdater(ctx context.Context, configPath string, opts ...NewClientOpt) (*
 // ValidateEntities function validates the given entities through the rules:
 //   - Each entity ID is unique
 func (u *Updater) ValidateEntities() error {
+	if len(u.config.Entities) == 0 {
+		return errors.New("no entity is defined, need at least 1")
+	}
 	ids := make(map[string]bool)
 	for _, e := range u.config.Entities {
 		if _, ok := ids[e.ID]; ok {
