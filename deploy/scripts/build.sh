@@ -16,4 +16,4 @@ fi
 
 GIT_ROOT=$(git rev-parse --show-toplevel)
 
-KO_DOCKER_REPO=$registry ko build --platform=all --tags $version,latest -B $GIT_ROOT/cmd/agent-updater
+KO_DOCKER_REPO=$registry ko build --platform=all --sbom=none --tags $version,latest -B $GIT_ROOT/cmd/agent-updater
