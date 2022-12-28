@@ -52,7 +52,7 @@ func (c *Client) GetLatestApplicableTag(id string) (*core.LatestTagResponse, err
 		return nil, err
 	}
 	if res.StatusCode != 200 {
-		return nil, fmt.Errorf("API returned %d, response body: %s", res.StatusCode, string(data))
+		return nil, fmt.Errorf("StatusCode != 200 (%d), response body: %s", res.StatusCode, string(data))
 	}
 	var r core.LatestTagResponse
 	if err := json.Unmarshal(data, &r); err != nil {

@@ -65,10 +65,10 @@ func NewUpdater(ctx context.Context, configPath string, opts ...NewClientOpt) (*
 	}
 	u.k8sCli = cl
 	if err := u.EvaluateConfigVars(ctx); err != nil {
-		return nil, fmt.Errorf("failed to evaluate config vars, err: %v", err)
+		return nil, fmt.Errorf("EvaluateConfigVars: %v", err)
 	}
 	if err := u.ValidateEntities(); err != nil {
-		return nil, fmt.Errorf("failed to validate entities, err: %v", err)
+		return nil, fmt.Errorf("ValidateEntities: %v", err)
 	}
 	u.apiCli = api.NewClient(&u.config.API)
 	return u, nil

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -24,5 +25,5 @@ func (e *Errors) ErrorOrNil() error {
 	if len(e.errors) == 0 {
 		return nil
 	}
-	return fmt.Errorf(strings.Join(e.errors, "\n"))
+	return errors.New(strings.Join(e.errors, "\n"))
 }
