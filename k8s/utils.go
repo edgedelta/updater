@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -16,7 +17,7 @@ var (
 
 func SetStructFieldValue(o any, path []string, setValue any) error {
 	if len(path) == 0 {
-		return fmt.Errorf("no path specified")
+		return errors.New("no path specified")
 	}
 	fields := structs.Fields(o)
 	lookForTag := path[0]
@@ -39,7 +40,7 @@ func SetStructFieldValue(o any, path []string, setValue any) error {
 		}
 		if len(path) == 1 {
 			if wantSlice {
-				return fmt.Errorf("directly setting a slice element is not supported")
+				return errors.New("directly setting a slice element is not supported")
 			}
 			return f.Set(setValue)
 		}

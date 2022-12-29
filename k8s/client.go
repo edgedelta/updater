@@ -44,33 +44,37 @@ func NewClient(opts ...NewClientOpt) (*Client, error) {
 	return cli, nil
 }
 
+func (c *Client) Info() {
+
+}
+
 func (c *Client) SetResourceKeyValue(ctx context.Context, path core.K8sResourcePath, updateValue string) error {
 	res, err := path.Parse()
 	if err != nil {
-		return fmt.Errorf("failed to parse resource path, err: %v", err)
+		return fmt.Errorf("path.Parse: %v", err)
 	}
 	if _, ok := core.SupportedK8sResourceKinds[res.Kind]; !ok {
-		return fmt.Errorf("K8s resource kind %s is not supported", res.Kind)
+		return fmt.Errorf("K8s resource kind %q is not supported", res.Kind)
 	}
 	switch res.Kind {
 	case core.K8sDaemonset:
 		ds, err := c.clientset.AppsV1().DaemonSets(res.Namespace).Get(ctx, res.Name, v1.GetOptions{})
 		if err != nil {
-			return fmt.Errorf("failed to get DaemonSet %s in namespace %s, err: %v", res.Name, res.Namespace, err)
+			return fmt.Errorf("clientset.AppsV1.DaemonSets.Get: %v", err)
 		}
 		if ds == nil {
-			return fmt.Errorf("no DaemonSet exists with name %s in namespace %s", res.Name, res.Namespace)
+			return fmt.Errorf("no DaemonSet exists with name %q in namespace %q", res.Name, res.Namespace)
 		}
 		fieldSelectorPath := strings.Split(res.UpdateKeyPath, ".")
 		if err := SetStructFieldValue(ds, fieldSelectorPath, updateValue); err != nil {
-			return fmt.Errorf("failed to set fieldpath '%s' of DaemonSet, err: %v", res.UpdateKeyPath, err)
+			return fmt.Errorf("SetStructFieldValue: %v", err)
 		}
 		_, err = c.clientset.AppsV1().DaemonSets(res.Namespace).Update(ctx, ds, v1.UpdateOptions{})
 		if err != nil {
-			return fmt.Errorf("failed to update the DaemonSet with new value %+v, err: %v", ds, err)
+			return fmt.Errorf("clientset.AppsV1.DaemonSets.Update: %v", err)
 		}
 	default:
-		return fmt.Errorf("no handlers available for resource kind %s", res.Kind)
+		return fmt.Errorf("unsupported K8s resource kind: %q", res.Kind)
 	}
 	return nil
 }
