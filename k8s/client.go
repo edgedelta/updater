@@ -7,6 +7,7 @@ import (
 
 	"github.com/edgedelta/updater/core"
 
+	"github.com/rs/zerolog/log"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -66,13 +67,19 @@ func (c *Client) SetResourceKeyValue(ctx context.Context, path core.K8sResourceP
 			return fmt.Errorf("no DaemonSet exists with name %q in namespace %q", res.Name, res.Namespace)
 		}
 		fieldSelectorPath := strings.Split(res.UpdateKeyPath, ".")
-		if err := SetStructFieldValue(ds, fieldSelectorPath, updateValue); err != nil {
+		updated, err := CompareAndUpdateStructField(ds, fieldSelectorPath, updateValue)
+		if err != nil {
 			return fmt.Errorf("SetStructFieldValue: %v", err)
+		}
+		if !updated {
+			log.Info().Msgf("Passing version update of resource with path %s to %s, older version is the same as the new one", path, updateValue)
+			return nil
 		}
 		_, err = c.clientset.AppsV1().DaemonSets(res.Namespace).Update(ctx, ds, v1.UpdateOptions{})
 		if err != nil {
 			return fmt.Errorf("clientset.AppsV1.DaemonSets.Update: %v", err)
 		}
+		log.Info().Msgf("Updated version of resource with path %s to %s", path, updateValue)
 	default:
 		return fmt.Errorf("unsupported K8s resource kind: %q", res.Kind)
 	}
