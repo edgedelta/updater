@@ -10,3 +10,5 @@ api:
     auth:
       header_key: X-ED-Config-Id
       header_value: '{{ .k8s.secrets.edgedelta.ed-api-key }}'
+  log_upload:
+    endpoint: '/upload_self_logs'

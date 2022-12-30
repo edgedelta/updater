@@ -12,9 +12,17 @@ type EntityProperties struct {
 }
 
 type APIConfig struct {
-	BaseURL           string         `yaml:"base_url"`
-	LatestTagEndpoint EndpointConfig `yaml:"latest_tag"`
-	TopLevelAuth      *APIAuth       `yaml:"auth,omitempty"`
+	BaseURL           string          `yaml:"base_url"`
+	LatestTagEndpoint EndpointConfig  `yaml:"latest_tag"`
+	LogUpload         LogUploadConfig `yaml:"log_upload"`
+	TopLevelAuth      *APIAuth        `yaml:"auth,omitempty"`
+}
+
+type LogUploadConfig struct {
+	PresignedUploadURLEndpoint EndpointConfig `yaml:"presigned_upload_url"`
+	Method                     string         `yaml:"method"`
+	Auth                       *APIAuth       `yaml:"auth,omitempty"`
+	Params                     *ParamConf     `yaml:"params,omitempty"`
 }
 
 type EndpointConfig struct {
@@ -41,4 +49,6 @@ type LatestTagResponse struct {
 
 type VersioningServiceClient interface {
 	GetLatestApplicableTag(entityID string) (*LatestTagResponse, error)
+	GetPresignedLogUploadURL() (string, error)
+	UploadLogs(lines []string) error
 }

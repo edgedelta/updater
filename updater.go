@@ -11,9 +11,9 @@ import (
 	"github.com/edgedelta/updater/api"
 	"github.com/edgedelta/updater/core"
 	"github.com/edgedelta/updater/k8s"
+	"github.com/edgedelta/updater/log"
 
 	"github.com/go-yaml/yaml"
-	"github.com/rs/zerolog/log"
 	"k8s.io/client-go/rest"
 )
 
@@ -54,7 +54,7 @@ func NewUpdater(ctx context.Context, configPath string, opts ...NewClientOpt) (*
 		if err != nil {
 			return nil, err
 		}
-		log.Debug().Msgf("Config file %s contents: %s", configPath, string(b))
+		log.Debug("Config file %s contents: %s", configPath, string(b))
 		if err := yaml.Unmarshal(b, u.config); err != nil {
 			return nil, err
 		}
@@ -72,6 +72,10 @@ func NewUpdater(ctx context.Context, configPath string, opts ...NewClientOpt) (*
 	}
 	u.apiCli = api.NewClient(&u.config.API)
 	return u, nil
+}
+
+func (u *Updater) APIClient() *api.Client {
+	return u.apiCli.(*api.Client)
 }
 
 // ValidateEntities function validates the given entities through the rules:
@@ -103,7 +107,7 @@ func (u *Updater) Run(ctx context.Context) error {
 				errors.Addf("failed to set K8s resource spec key/value for entity with ID %s (path: %s, value: %s), err: %v", entity.ID, path, res.URL, err)
 				continue
 			}
-			log.Info().Msgf("Updated version of resource with path %s to %s", path, res.URL)
+			log.Info("Updated version of resource with path %s to %s", path, res.URL)
 		}
 	}
 	return errors.ErrorOrNil()
