@@ -1,5 +1,10 @@
 package core
 
+import (
+	"github.com/edgedelta/updater/core/compressors"
+	"github.com/edgedelta/updater/core/encoders"
+)
+
 type UpdaterConfig struct {
 	Entities []EntityProperties `yaml:"entities"`
 	API      APIConfig          `yaml:"api"`
@@ -19,10 +24,12 @@ type APIConfig struct {
 }
 
 type LogUploadConfig struct {
-	PresignedUploadURLEndpoint EndpointConfig `yaml:"presigned_upload_url"`
-	Method                     string         `yaml:"method"`
-	Auth                       *APIAuth       `yaml:"auth,omitempty"`
-	Params                     *ParamConf     `yaml:"params,omitempty"`
+	PresignedUploadURLEndpoint EndpointConfig              `yaml:"presigned_upload_url"`
+	Method                     string                      `yaml:"method"`
+	Encoding                   encoders.EncodingType       `yaml:"enconding"`
+	Compression                compressors.CompressionType `yaml:"compression,omitempty"`
+	Auth                       *APIAuth                    `yaml:"auth,omitempty"`
+	Params                     *ParamConf                  `yaml:"params,omitempty"`
 }
 
 type EndpointConfig struct {
@@ -38,7 +45,6 @@ type APIAuth struct {
 
 type ParamConf struct {
 	QueryParams map[string]string `yaml:"query,omitempty"`
-	PathParams  map[string]string `yaml:"path,omitempty"`
 }
 
 type LatestTagResponse struct {
@@ -49,6 +55,6 @@ type LatestTagResponse struct {
 
 type VersioningServiceClient interface {
 	GetLatestApplicableTag(entityID string) (*LatestTagResponse, error)
-	GetPresignedLogUploadURL() (string, error)
-	UploadLogs(lines []string) error
+	GetPresignedLogUploadURL(logSize int) (string, error)
+	UploadLogs(lines []any) error
 }

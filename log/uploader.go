@@ -114,7 +114,11 @@ func (u *Uploader) process(l []byte) {
 
 func (u *Uploader) flush() {
 	size := len(u.buffer)
-	if err := u.cl.UploadLogs(u.buffer); err != nil {
+	b := make([]any, len(u.buffer))
+	for i, it := range u.buffer {
+		b[i] = it
+	}
+	if err := u.cl.UploadLogs(b); err != nil {
 		log.Fatalf("api.Client.UploadLogs: %v", err)
 	}
 	u.buffer = make([]string, 0)

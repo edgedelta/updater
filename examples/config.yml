@@ -11,4 +11,12 @@ api:
       header_key: X-ED-Config-Id
       header_value: '{{ .k8s.secrets.edgedelta.ed-api-key }}'
   log_upload:
-    endpoint: '/upload_self_logs'
+    method: PUSH
+    encoding: json
+    compression: gzip
+    params:
+      query:
+        size: '{{ .ctx.size }}'
+    presigned_upload_url:
+      endpoint: '/get_upload_link'
+  

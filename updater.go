@@ -18,7 +18,8 @@ import (
 )
 
 var (
-	confVarRe = regexp.MustCompile(`{{\s*([^{} ]+)\s*}}`)
+	confVarRe                        = regexp.MustCompile(`{{\s*([^{} ]+)\s*}}`)
+	contextualVariableTemplateFormat = `{{ index .Vars "%s" }}`
 )
 
 type Updater struct {
@@ -136,11 +137,6 @@ func (u *Updater) EvaluateConfigVars(ctx context.Context) (err error) {
 				return
 			}
 		}
-		for k, v := range u.config.API.LatestTagEndpoint.Params.PathParams {
-			if u.config.API.LatestTagEndpoint.Params.QueryParams[k], err = u.evaluateConfigVar(ctx, v); err != nil {
-				return
-			}
-		}
 	}
 	if u.config.API.LatestTagEndpoint.Auth != nil {
 		if u.config.API.LatestTagEndpoint.Auth.HeaderKey, err = u.evaluateConfigVar(ctx, u.config.API.LatestTagEndpoint.Auth.HeaderKey); err != nil {
@@ -162,6 +158,7 @@ func (u *Updater) evaluateConfigVar(ctx context.Context, val string) (string, er
 			elms := strings.Split(path, ".")
 			if len(elms) != 2 {
 				err = fmt.Errorf("path should have pattern: .k8s.<NAMESPACE>.<SECRET-NAME>, got '%s' instead", path)
+				return ""
 			}
 			namespace := elms[0]
 			name := elms[1]
@@ -172,6 +169,13 @@ func (u *Updater) evaluateConfigVar(ctx context.Context, val string) (string, er
 		if strings.HasPrefix(inner, ".env") {
 			key := inner[5:] // .env.<KEY>
 			return os.Getenv(key)
+		}
+		if strings.HasPrefix(inner, ".ctx") {
+			key := inner[5:] // .ctx.<KEY>
+
+			// Replace the contextual variable's key to a Go template map index key to later
+			// use inside the related function(s).
+			return fmt.Sprintf(contextualVariableTemplateFormat, key)
 		}
 		err = fmt.Errorf("config var '%s' starts with an unknown item '%s' (expected '.k8s' or '.env')", s, inner)
 		return ""

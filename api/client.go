@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"text/template"
+	"net/url"
 
 	"github.com/edgedelta/updater/core"
+	"github.com/edgedelta/updater/core/compressors"
+	"github.com/edgedelta/updater/core/encoders"
 )
 
 type Client struct {
@@ -27,7 +29,7 @@ func NewClient(conf *core.APIConfig) *Client {
 func (c *Client) GetLatestApplicableTag(id string) (*core.LatestTagResponse, error) {
 	url, err := constructURLWithParams(
 		c.conf.BaseURL+c.conf.LatestTagEndpoint.Endpoint,
-		c.conf.LatestTagEndpoint.Params,
+		c.conf.LatestTagEndpoint.Params, nil,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("constructURLWithParams: %v", err)
@@ -61,10 +63,12 @@ func (c *Client) GetLatestApplicableTag(id string) (*core.LatestTagResponse, err
 	return &r, nil
 }
 
-func (c *Client) GetPresignedLogUploadURL() (string, error) {
+func (c *Client) GetPresignedLogUploadURL(logSize int) (string, error) {
 	url, err := constructURLWithParams(
 		c.conf.BaseURL+c.conf.LogUpload.PresignedUploadURLEndpoint.Endpoint,
-		c.conf.LogUpload.PresignedUploadURLEndpoint.Params,
+		c.conf.LogUpload.PresignedUploadURLEndpoint.Params, map[string]string{
+			"size": fmt.Sprintf("%d", logSize),
+		},
 	)
 	if err != nil {
 		return "", fmt.Errorf("constructURLWithParams: %v", err)
@@ -98,16 +102,31 @@ func (c *Client) GetPresignedLogUploadURL() (string, error) {
 	return presignedURL, nil
 }
 
-func (c *Client) UploadLogs(lines []string) error {
-	presignedURL, err := c.GetPresignedLogUploadURL()
+func (c *Client) UploadLogs(lines []any) error {
+	wr := new(bytes.Buffer)
+	comp, err := compressors.New(wr, c.conf.LogUpload.Compression)
+	if err != nil {
+		return fmt.Errorf("compressors.New: %v", err)
+	}
+	enc, err := encoders.New(comp, c.conf.LogUpload.Encoding)
+	if err != nil {
+		return fmt.Errorf("encoders.New: %v", err)
+	}
+	if err := enc.Write(lines); err != nil {
+		return fmt.Errorf("encoders.Encoder.Write: %v", err)
+	}
+	if err := enc.Close(); err != nil {
+		return fmt.Errorf("encoders.Encoder.Close: %v", err)
+	}
+	presignedURL, err := c.GetPresignedLogUploadURL(wr.Len())
 	if err != nil {
 		return fmt.Errorf("api.Client.GetPresignedLogUploadURL: %v", err)
 	}
-	url, err := constructURLWithParams(presignedURL, c.conf.LogUpload.PresignedUploadURLEndpoint.Params)
+	url, err := constructURLWithParams(presignedURL, c.conf.LogUpload.PresignedUploadURLEndpoint.Params, nil)
 	if err != nil {
 		return fmt.Errorf("constructURLWithParams: %v", err)
 	}
-	req, err := http.NewRequest(c.conf.LogUpload.Method, url, nil)
+	req, err := http.NewRequest(c.conf.LogUpload.Method, url, wr)
 	if err != nil {
 		return fmt.Errorf("http.NewRequest: %v", err)
 	}
@@ -132,25 +151,22 @@ func (c *Client) UploadLogs(lines []string) error {
 	return nil
 }
 
-func constructURLWithParams(base string, params *core.ParamConf) (string, error) {
-	if params == nil {
-		return base, nil
-	}
-
-	t, err := template.New("url-template").Parse(base)
+func constructURLWithParams(base string, params *core.ParamConf, ctxVars map[string]string) (string, error) {
+	u, err := url.Parse(base)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("url.Parse: %v", err)
 	}
-
-	// TODO: This will lead to an ugly templating syntax, change it to on-demand struct fields
-	data := map[string]map[string]string{
-		"path":  params.PathParams,
-		"query": params.QueryParams,
+	if params == nil {
+		return u.String(), nil
 	}
-
-	buffer := new(bytes.Buffer)
-	if err := t.Execute(buffer, data); err != nil {
-		return "", err
+	q := u.Query()
+	for k, v := range params.QueryParams {
+		val, err := core.EvaluateContextualTemplate(v, ctxVars)
+		if err != nil {
+			return "", fmt.Errorf("core.EvaluateContextualTemplate: %v", err)
+		}
+		q.Add(k, val)
 	}
-	return buffer.String(), nil
+	u.RawQuery = q.Encode()
+	return u.String(), nil
 }
