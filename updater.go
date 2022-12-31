@@ -55,7 +55,6 @@ func NewUpdater(ctx context.Context, configPath string, opts ...NewClientOpt) (*
 		if err != nil {
 			return nil, err
 		}
-		log.Debug("Config file %s contents: %s", configPath, string(b))
 		if err := yaml.Unmarshal(b, u.config); err != nil {
 			return nil, err
 		}
@@ -66,10 +65,10 @@ func NewUpdater(ctx context.Context, configPath string, opts ...NewClientOpt) (*
 	}
 	u.k8sCli = cl
 	if err := u.EvaluateConfigVars(ctx); err != nil {
-		return nil, fmt.Errorf("EvaluateConfigVars: %v", err)
+		return nil, fmt.Errorf("updater.Updater.EvaluateConfigVars: %v", err)
 	}
 	if err := u.ValidateEntities(); err != nil {
-		return nil, fmt.Errorf("ValidateEntities: %v", err)
+		return nil, fmt.Errorf("updater.Updater.ValidateEntities: %v", err)
 	}
 	u.apiCli = api.NewClient(&u.config.API)
 	return u, nil
@@ -103,7 +102,7 @@ func (u *Updater) Run(ctx context.Context) error {
 			errors.Addf("failed to get latest applicable tag from API for entity with ID %s, err: %v", entity.ID, err)
 			continue
 		}
-		log.Info().Msgf("Latest applicable tag from API: %+v", res)
+		log.Info("Latest applicable tag from API: %+v", res)
 		for _, path := range entity.K8sPaths {
 			if err := u.k8sCli.SetResourceKeyValue(ctx, path, res.URL); err != nil {
 				errors.Addf("failed to set K8s resource spec key/value for entity with ID %s (path: %s, value: %s), err: %v", entity.ID, path, res.URL, err)
