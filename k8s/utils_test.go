@@ -17,29 +17,35 @@ func TestCompareAndUpdateStructField(t *testing.T) {
 		updateValue string
 		wantObject  any
 		wantUpdated bool
+		wantOld     string
 	}{
 		{
-			desc:        "Update K8s daemonset images",
+			desc:        "Update K8s daemonset image",
 			object:      daemonsetWithImage("gcr.io/edgedelta/agent:v0.1.47"),
 			path:        []string{"spec", "template", "spec", "containers[0]", "image"},
 			updateValue: "gcr.io/edgedelta/agent:v0.1.49",
 			wantUpdated: true,
 			wantObject:  daemonsetWithImage("gcr.io/edgedelta/agent:v0.1.49"),
+			wantOld:     "gcr.io/edgedelta/agent:v0.1.47",
 		},
 		{
-			desc:        "Update K8s daemonset images",
+			desc:        "No update K8s daemonset image",
 			object:      daemonsetWithImage("gcr.io/edgedelta/agent:v0.1.47"),
 			path:        []string{"spec", "template", "spec", "containers[0]", "image"},
 			updateValue: "gcr.io/edgedelta/agent:v0.1.47",
 			wantUpdated: false,
 			wantObject:  daemonsetWithImage("gcr.io/edgedelta/agent:v0.1.47"),
+			wantOld:     "gcr.io/edgedelta/agent:v0.1.47",
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
-			updated, err := CompareAndUpdateStructField(tc.object, tc.path, tc.updateValue)
+			old, updated, err := CompareAndUpdateStructField(tc.object, tc.path, tc.updateValue)
 			if err != nil {
 				t.Fatal(err)
+			}
+			if old != tc.wantOld {
+				t.Fatalf("Wanted 'old' return value as %s, got %s instead", tc.wantOld, old)
 			}
 			if updated != tc.wantUpdated {
 				t.Fatalf("Wanted 'updated' return value as %t, got %t instead", tc.wantUpdated, updated)

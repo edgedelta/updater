@@ -1,9 +1,8 @@
-package log
+package loguploader
 
 import (
 	"context"
 	"io"
-	"log"
 	"sync/atomic"
 	"time"
 
@@ -14,12 +13,12 @@ import (
 
 const (
 	uploaderChanBufferSize = 100
-	uploaderFlushInterval  = 5 * time.Second
+	uploaderFlushInterval  = time.Minute
 )
 
 type Uploader struct {
 	name       string
-	incoming   chan []byte
+	incoming   chan string
 	buffer     []string
 	cl         *api.Client
 	isRunning  int32
@@ -28,23 +27,22 @@ type Uploader struct {
 }
 
 type incomingLogWriter struct {
-	buffer chan<- []byte
+	buffer chan<- string
 }
 
 func (w *incomingLogWriter) Write(b []byte) (int, error) {
-	w.buffer <- b
+	w.buffer <- string(b)
 	return len(b), nil
 }
 
-func NewUploader(ctx context.Context, name string, cl *api.Client) *Uploader {
-	u := &Uploader{
+func New(ctx context.Context, name string, cl *api.Client) *Uploader {
+	return &Uploader{
 		name:      name,
-		incoming:  make(chan []byte, uploaderChanBufferSize),
+		incoming:  make(chan string, uploaderChanBufferSize),
 		buffer:    make([]string, 0),
 		cl:        cl,
 		isRunning: 0,
 	}
-	return u
 }
 
 func (u *Uploader) Name() string {
@@ -64,25 +62,20 @@ func (u *Uploader) Run() {
 	}
 }
 
-func (u *Uploader) Stop() {
-	if atomic.CompareAndSwapInt32(&u.isRunning, 1, 0) {
-		u.stop()
-	}
-}
-
 func (u *Uploader) StopBlocking() <-chan struct{} {
 	if atomic.CompareAndSwapInt32(&u.isRunning, 1, 0) {
 		u.stop()
 		return u.stopDoneCh
 	}
 	ch := make(chan struct{})
-	ch <- struct{}{}
+	close(ch)
 	return ch
 }
 
 func (u *Uploader) stop() {
 	zerolog.Debug().Msgf("Stopping log.Uploader %s", u.name)
-	u.stopCh <- struct{}{}
+	close(u.incoming)
+	close(u.stopCh)
 }
 
 func (u *Uploader) run() {
@@ -90,8 +83,9 @@ func (u *Uploader) run() {
 	for {
 		select {
 		case <-u.stopCh:
+			zerolog.Debug().Msgf("log.Uploader %s got stop signal, will drain remaining logs", u.name)
 			u.drain()
-			u.stopDoneCh <- struct{}{}
+			close(u.stopDoneCh)
 			return
 		case l := <-u.incoming:
 			u.process(l)
@@ -108,18 +102,18 @@ func (u *Uploader) drain() {
 	u.flush()
 }
 
-func (u *Uploader) process(l []byte) {
-	u.buffer = append(u.buffer, string(l))
+func (u *Uploader) process(l string) {
+	u.buffer = append(u.buffer, l)
 }
 
 func (u *Uploader) flush() {
 	size := len(u.buffer)
-	b := make([]any, len(u.buffer))
-	for i, it := range u.buffer {
-		b[i] = it
+	b := make([]interface{}, 0, len(u.buffer))
+	for _, it := range u.buffer {
+		b = append(b, it)
 	}
 	if err := u.cl.UploadLogs(b); err != nil {
-		log.Fatalf("api.Client.UploadLogs: %v", err)
+		zerolog.Fatal().Msgf("api.Client.UploadLogs: %v", err)
 	}
 	u.buffer = make([]string, 0)
 	zerolog.Debug().Msgf("log.Uploader %s flushed %d lines of logs", u.name, size)

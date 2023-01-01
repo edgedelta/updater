@@ -14,7 +14,7 @@ func NewJSONEncoder(wr io.Writer) *JSONEncoder {
 	return &JSONEncoder{wr: wr}
 }
 
-func (e *JSONEncoder) Write(objects []any) error {
+func (e *JSONEncoder) Write(objects []interface{}) error {
 	encoder := json.NewEncoder(e.wr)
 	for _, o := range objects {
 		if err := encoder.Encode(o); err != nil {

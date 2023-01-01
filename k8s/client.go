@@ -67,10 +67,11 @@ func (c *Client) SetResourceKeyValue(ctx context.Context, path core.K8sResourceP
 			return fmt.Errorf("no DaemonSet exists with name %q in namespace %q", res.Name, res.Namespace)
 		}
 		fieldSelectorPath := strings.Split(res.UpdateKeyPath, ".")
-		updated, err := CompareAndUpdateStructField(ds, fieldSelectorPath, updateValue)
+		old, updated, err := CompareAndUpdateStructField(ds, fieldSelectorPath, updateValue)
 		if err != nil {
 			return fmt.Errorf("k8s.CompareAndUpdateStructField: %v", err)
 		}
+		log.Info("Current daemonset image version is %s", old)
 		if !updated {
 			log.Info("Passing version update of resource with path %s to %s, older version is the same as the new one", path, updateValue)
 			return nil

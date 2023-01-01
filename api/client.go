@@ -11,6 +11,7 @@ import (
 	"github.com/edgedelta/updater/core"
 	"github.com/edgedelta/updater/core/compressors"
 	"github.com/edgedelta/updater/core/encoders"
+	"github.com/edgedelta/updater/log"
 )
 
 type Client struct {
@@ -64,6 +65,7 @@ func (c *Client) GetLatestApplicableTag(id string) (*core.LatestTagResponse, err
 }
 
 func (c *Client) GetPresignedLogUploadURL(logSize int) (string, error) {
+	log.Debug("api.Client.GetPresignedLogUploadURL: Called with log size %d", logSize)
 	url, err := constructURLWithParams(
 		c.conf.BaseURL+c.conf.LogUpload.PresignedUploadURLEndpoint.Endpoint,
 		c.conf.LogUpload.PresignedUploadURLEndpoint.Params, map[string]string{
@@ -102,7 +104,7 @@ func (c *Client) GetPresignedLogUploadURL(logSize int) (string, error) {
 	return presignedURL, nil
 }
 
-func (c *Client) UploadLogs(lines []any) error {
+func (c *Client) UploadLogs(lines []interface{}) error {
 	wr := new(bytes.Buffer)
 	comp, err := compressors.New(wr, c.conf.LogUpload.Compression)
 	if err != nil {
@@ -118,11 +120,17 @@ func (c *Client) UploadLogs(lines []any) error {
 	if err := enc.Close(); err != nil {
 		return fmt.Errorf("encoders.Encoder.Close: %v", err)
 	}
+	if err := comp.Flush(); err != nil {
+		return fmt.Errorf("compressors.Compressor.Flush: %v", err)
+	}
+	if err := comp.Close(); err != nil {
+		return fmt.Errorf("compressors.Compressor.Close: %v", err)
+	}
 	presignedURL, err := c.GetPresignedLogUploadURL(wr.Len())
 	if err != nil {
 		return fmt.Errorf("api.Client.GetPresignedLogUploadURL: %v", err)
 	}
-	url, err := constructURLWithParams(presignedURL, c.conf.LogUpload.PresignedUploadURLEndpoint.Params, nil)
+	url, err := constructURLWithParams(presignedURL, c.conf.LogUpload.Params, nil)
 	if err != nil {
 		return fmt.Errorf("constructURLWithParams: %v", err)
 	}

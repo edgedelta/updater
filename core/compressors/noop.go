@@ -14,6 +14,10 @@ func (c *NoOpCompressor) Write(b []byte) (n int, err error) {
 	return c.wr.Write(b)
 }
 
+func (c *NoOpCompressor) Flush() error {
+	return nil
+}
+
 func (c *NoOpCompressor) Close() error {
 	return nil
 }

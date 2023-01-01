@@ -10,15 +10,16 @@ import (
 
 	"github.com/edgedelta/updater"
 	"github.com/edgedelta/updater/log"
+	"github.com/edgedelta/updater/loguploader"
 )
 
 var (
 	configPath  = flag.String("config", "", "Local config path")
-	logUploader *log.Uploader
+	logUploader *loguploader.Uploader
 )
 
 const (
-	gracefulShutdownPeriod = 20 * time.Second
+	gracefulShutdownPeriod = time.Minute
 )
 
 func main() {
@@ -37,8 +38,11 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to construct new Updater, err: %v", err)
 	}
-	logUploader = log.NewUploader(ctx, "self_log_uploader", updater.APIClient())
-	log.SetWriters(os.Stdout, logUploader.Writer())
+	if updater.LogUploaderEnabled() {
+		logUploader = loguploader.New(ctx, "self_log_uploader", updater.APIClient())
+		log.SetWriters(os.Stdout, logUploader.Writer())
+		logUploader.Run()
+	}
 	if err := updater.Run(ctx); err != nil {
 		log.Error(err, "Runtime error")
 	}
@@ -67,10 +71,11 @@ func handleGracefulShutdown() {
 	for {
 		select {
 		case <-logUploaderStopped:
-			log.Debug("Log uploader %s stopped", logUploader.Name())
+			log.Info("Log uploader %s stopped", logUploader.Name())
 			return
 		case <-t.C:
-			log.Debug("Could not stop log uploader %s within the graceful shutdown period (%.0fm)", logUploader.Name(), gracefulShutdownPeriod.Minutes())
+			log.Warn("Could not stop log uploader %s within the graceful shutdown period (%.0fm)", logUploader.Name(), gracefulShutdownPeriod.Minutes())
+			return
 		}
 	}
 }

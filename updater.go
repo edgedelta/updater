@@ -78,6 +78,10 @@ func (u *Updater) APIClient() *api.Client {
 	return u.apiCli.(*api.Client)
 }
 
+func (u *Updater) LogUploaderEnabled() bool {
+	return u.config.API.LogUpload != nil && u.config.API.LogUpload.Enabled
+}
+
 // ValidateEntities function validates the given entities through the rules:
 //   - Each entity ID is unique
 func (u *Updater) ValidateEntities() error {
@@ -95,6 +99,7 @@ func (u *Updater) ValidateEntities() error {
 }
 
 func (u *Updater) Run(ctx context.Context) error {
+	u.informSetup()
 	errors := core.NewErrors()
 	for _, entity := range u.config.Entities {
 		res, err := u.apiCli.GetLatestApplicableTag(entity.ID)
@@ -145,6 +150,32 @@ func (u *Updater) EvaluateConfigVars(ctx context.Context) (err error) {
 			return
 		}
 	}
+	if u.config.API.LogUpload.Auth != nil {
+		if u.config.API.LogUpload.Auth.HeaderKey, err = u.evaluateConfigVar(ctx, u.config.API.LogUpload.Auth.HeaderKey); err != nil {
+			return
+		}
+		if u.config.API.LogUpload.Auth.HeaderValue, err = u.evaluateConfigVar(ctx, u.config.API.LogUpload.Auth.HeaderValue); err != nil {
+			return
+		}
+	}
+	if u.config.API.LogUpload.PresignedUploadURLEndpoint.Endpoint, err = u.evaluateConfigVar(ctx, u.config.API.LogUpload.PresignedUploadURLEndpoint.Endpoint); err != nil {
+		return
+	}
+	if u.config.API.LogUpload.PresignedUploadURLEndpoint.Params != nil {
+		for k, v := range u.config.API.LogUpload.PresignedUploadURLEndpoint.Params.QueryParams {
+			if u.config.API.LogUpload.PresignedUploadURLEndpoint.Params.QueryParams[k], err = u.evaluateConfigVar(ctx, v); err != nil {
+				return
+			}
+		}
+	}
+	if u.config.API.LogUpload.PresignedUploadURLEndpoint.Auth != nil {
+		if u.config.API.LogUpload.PresignedUploadURLEndpoint.Auth.HeaderKey, err = u.evaluateConfigVar(ctx, u.config.API.LogUpload.PresignedUploadURLEndpoint.Auth.HeaderKey); err != nil {
+			return
+		}
+		if u.config.API.LogUpload.PresignedUploadURLEndpoint.Auth.HeaderValue, err = u.evaluateConfigVar(ctx, u.config.API.LogUpload.PresignedUploadURLEndpoint.Auth.HeaderValue); err != nil {
+			return
+		}
+	}
 	return nil
 }
 
@@ -165,11 +196,11 @@ func (u *Updater) evaluateConfigVar(ctx context.Context, val string) (string, er
 			secret, err = u.k8sCli.GetSecret(ctx, namespace, name)
 			return secret
 		}
-		if strings.HasPrefix(inner, ".env") {
+		if strings.HasPrefix(inner, ".env.") {
 			key := inner[5:] // .env.<KEY>
 			return os.Getenv(key)
 		}
-		if strings.HasPrefix(inner, ".ctx") {
+		if strings.HasPrefix(inner, ".ctx.") {
 			key := inner[5:] // .ctx.<KEY>
 
 			// Replace the contextual variable's key to a Go template map index key to later
@@ -179,4 +210,18 @@ func (u *Updater) evaluateConfigVar(ctx context.Context, val string) (string, er
 		err = fmt.Errorf("config var '%s' starts with an unknown item '%s' (expected '.k8s' or '.env')", s, inner)
 		return ""
 	}), err
+}
+
+func (u *Updater) informSetup() {
+	entities := make([]string, 0)
+	for _, e := range u.config.Entities {
+		entities = append(entities, fmt.Sprintf("%s:%s", e.ImageName, e.ID))
+	}
+	l := fmt.Sprintf("Updater is running for entities %s with API base URL: %s, latest tag endpoint: %s, log uploader is", strings.Join(entities, ", "), u.config.API.BaseURL, u.config.API.LatestTagEndpoint.Endpoint)
+	if u.LogUploaderEnabled() {
+		l += fmt.Sprintf(" enabled with presigned URL endpoint: %s, encoding: %s, and compression: %s", u.config.API.LogUpload.PresignedUploadURLEndpoint.Endpoint, u.config.API.LogUpload.Encoding.Type, u.config.API.LogUpload.Compression)
+	} else {
+		l += " disabled"
+	}
+	log.Debug(l)
 }

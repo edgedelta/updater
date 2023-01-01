@@ -1,10 +1,5 @@
 package core
 
-import (
-	"github.com/edgedelta/updater/core/compressors"
-	"github.com/edgedelta/updater/core/encoders"
-)
-
 type UpdaterConfig struct {
 	Entities []EntityProperties `yaml:"entities"`
 	API      APIConfig          `yaml:"api"`
@@ -17,19 +12,20 @@ type EntityProperties struct {
 }
 
 type APIConfig struct {
-	BaseURL           string          `yaml:"base_url"`
-	LatestTagEndpoint EndpointConfig  `yaml:"latest_tag"`
-	LogUpload         LogUploadConfig `yaml:"log_upload"`
-	TopLevelAuth      *APIAuth        `yaml:"auth,omitempty"`
+	BaseURL           string           `yaml:"base_url"`
+	LatestTagEndpoint EndpointConfig   `yaml:"latest_tag"`
+	LogUpload         *LogUploadConfig `yaml:"log_upload,omitempty"`
+	TopLevelAuth      *APIAuth         `yaml:"auth,omitempty"`
 }
 
 type LogUploadConfig struct {
-	PresignedUploadURLEndpoint EndpointConfig              `yaml:"presigned_upload_url"`
-	Method                     string                      `yaml:"method"`
-	Encoding                   encoders.EncodingType       `yaml:"enconding"`
-	Compression                compressors.CompressionType `yaml:"compression,omitempty"`
-	Auth                       *APIAuth                    `yaml:"auth,omitempty"`
-	Params                     *ParamConf                  `yaml:"params,omitempty"`
+	Enabled                    bool            `yaml:"enabled"`
+	PresignedUploadURLEndpoint EndpointConfig  `yaml:"presigned_upload_url"`
+	Method                     string          `yaml:"method"`
+	Encoding                   *EncodingConfig `yaml:"encoding"`
+	Compression                CompressionType `yaml:"compression,omitempty"`
+	Auth                       *APIAuth        `yaml:"auth,omitempty"`
+	Params                     *ParamConf      `yaml:"params,omitempty"`
 }
 
 type EndpointConfig struct {
@@ -46,6 +42,29 @@ type APIAuth struct {
 type ParamConf struct {
 	QueryParams map[string]string `yaml:"query,omitempty"`
 }
+
+type EncodingConfig struct {
+	Type EncodingType     `yaml:"type"`
+	Opts *EncodingOptions `yaml:"options,omitempty"`
+}
+
+type EncodingType string
+
+const (
+	EncodingJSON EncodingType = "json"
+	EncodingRaw               = "raw"
+)
+
+type EncodingOptions struct {
+	Delimiter string `yaml:"delimiter,omitempty"`
+}
+
+type CompressionType string
+
+const (
+	CompressionGzip CompressionType = "gzip"
+	CompressionNoOp                 = ""
+)
 
 type LatestTagResponse struct {
 	Tag   string `json:"tag"`

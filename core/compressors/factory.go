@@ -4,24 +4,20 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+
+	"github.com/edgedelta/updater/core"
 )
 
 type Compressor interface {
 	io.WriteCloser
+	Flush() error
 }
 
-type CompressionType string
-
-const (
-	CompressionGzip CompressionType = "gzip"
-	CompressionNoOp                 = ""
-)
-
-func New(writer io.Writer, compression CompressionType) (Compressor, error) {
+func New(writer io.Writer, compression core.CompressionType) (Compressor, error) {
 	switch compression {
-	case CompressionGzip:
+	case core.CompressionGzip:
 		return gzip.NewWriter(writer), nil
-	case CompressionNoOp:
+	case core.CompressionNoOp:
 		return NewNoOpCompressor(writer), nil
 	}
 	return nil, fmt.Errorf("unknown compression type: %q", compression)
