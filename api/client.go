@@ -33,7 +33,7 @@ func (c *Client) GetLatestApplicableTag(id string) (*core.LatestTagResponse, err
 		c.conf.LatestTagEndpoint.Params, nil,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("constructURLWithParams: %v", err)
+		return nil, fmt.Errorf("constructURLWithParams err: %v", err)
 	}
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
