@@ -24,13 +24,11 @@ type LogUploadConfig struct {
 	Method                     string          `yaml:"method"`
 	Encoding                   *EncodingConfig `yaml:"encoding"`
 	Compression                CompressionType `yaml:"compression,omitempty"`
-	Auth                       *APIAuth        `yaml:"auth,omitempty"`
 	Params                     *ParamConf      `yaml:"params,omitempty"`
 }
 
 type EndpointConfig struct {
 	Endpoint string     `yaml:"endpoint"`
-	Auth     *APIAuth   `yaml:"auth,omitempty"`
 	Params   *ParamConf `yaml:"params,omitempty"`
 }
 

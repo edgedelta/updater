@@ -42,9 +42,6 @@ func (c *Client) GetLatestApplicableTag(id string) (*core.LatestTagResponse, err
 	if c.conf.TopLevelAuth != nil {
 		req.Header.Add(c.conf.TopLevelAuth.HeaderKey, c.conf.TopLevelAuth.HeaderValue)
 	}
-	if c.conf.LatestTagEndpoint.Auth != nil {
-		req.Header.Add(c.conf.LatestTagEndpoint.Auth.HeaderKey, c.conf.LatestTagEndpoint.Auth.HeaderValue)
-	}
 	res, err := c.cl.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("http.Client.Do: %v", err)
@@ -81,9 +78,6 @@ func (c *Client) GetPresignedLogUploadURL(logSize int) (string, error) {
 	}
 	if c.conf.TopLevelAuth != nil {
 		req.Header.Add(c.conf.TopLevelAuth.HeaderKey, c.conf.TopLevelAuth.HeaderValue)
-	}
-	if c.conf.LogUpload.PresignedUploadURLEndpoint.Auth != nil {
-		req.Header.Add(c.conf.LogUpload.PresignedUploadURLEndpoint.Auth.HeaderKey, c.conf.LogUpload.PresignedUploadURLEndpoint.Auth.HeaderValue)
 	}
 	res, err := c.cl.Do(req)
 	if err != nil {
@@ -140,9 +134,6 @@ func (c *Client) UploadLogs(lines []interface{}) error {
 	}
 	if c.conf.TopLevelAuth != nil {
 		req.Header.Add(c.conf.TopLevelAuth.HeaderKey, c.conf.TopLevelAuth.HeaderValue)
-	}
-	if c.conf.LogUpload.Auth != nil {
-		req.Header.Add(c.conf.LogUpload.Auth.HeaderKey, c.conf.LogUpload.Auth.HeaderValue)
 	}
 	res, err := c.cl.Do(req)
 	if err != nil {

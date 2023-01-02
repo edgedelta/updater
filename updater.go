@@ -142,22 +142,6 @@ func (u *Updater) EvaluateConfigVars(ctx context.Context) (err error) {
 			}
 		}
 	}
-	if u.config.API.LatestTagEndpoint.Auth != nil {
-		if u.config.API.LatestTagEndpoint.Auth.HeaderKey, err = u.evaluateConfigVar(ctx, u.config.API.LatestTagEndpoint.Auth.HeaderKey); err != nil {
-			return
-		}
-		if u.config.API.LatestTagEndpoint.Auth.HeaderValue, err = u.evaluateConfigVar(ctx, u.config.API.LatestTagEndpoint.Auth.HeaderValue); err != nil {
-			return
-		}
-	}
-	if u.config.API.LogUpload.Auth != nil {
-		if u.config.API.LogUpload.Auth.HeaderKey, err = u.evaluateConfigVar(ctx, u.config.API.LogUpload.Auth.HeaderKey); err != nil {
-			return
-		}
-		if u.config.API.LogUpload.Auth.HeaderValue, err = u.evaluateConfigVar(ctx, u.config.API.LogUpload.Auth.HeaderValue); err != nil {
-			return
-		}
-	}
 	if u.config.API.LogUpload.PresignedUploadURLEndpoint.Endpoint, err = u.evaluateConfigVar(ctx, u.config.API.LogUpload.PresignedUploadURLEndpoint.Endpoint); err != nil {
 		return
 	}
@@ -166,14 +150,6 @@ func (u *Updater) EvaluateConfigVars(ctx context.Context) (err error) {
 			if u.config.API.LogUpload.PresignedUploadURLEndpoint.Params.QueryParams[k], err = u.evaluateConfigVar(ctx, v); err != nil {
 				return
 			}
-		}
-	}
-	if u.config.API.LogUpload.PresignedUploadURLEndpoint.Auth != nil {
-		if u.config.API.LogUpload.PresignedUploadURLEndpoint.Auth.HeaderKey, err = u.evaluateConfigVar(ctx, u.config.API.LogUpload.PresignedUploadURLEndpoint.Auth.HeaderKey); err != nil {
-			return
-		}
-		if u.config.API.LogUpload.PresignedUploadURLEndpoint.Auth.HeaderValue, err = u.evaluateConfigVar(ctx, u.config.API.LogUpload.PresignedUploadURLEndpoint.Auth.HeaderValue); err != nil {
-			return
 		}
 	}
 	return nil
