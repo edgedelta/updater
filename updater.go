@@ -99,7 +99,7 @@ func (u *Updater) ValidateEntities() error {
 }
 
 func (u *Updater) Run(ctx context.Context) error {
-	u.informSetup()
+	u.logRunningConfig()
 	errors := core.NewErrors()
 	for _, entity := range u.config.Entities {
 		res, err := u.apiCli.GetLatestApplicableTag(entity.ID)
@@ -212,7 +212,7 @@ func (u *Updater) evaluateConfigVar(ctx context.Context, val string) (string, er
 	}), err
 }
 
-func (u *Updater) informSetup() {
+func (u *Updater) logRunningConfig() {
 	entities := make([]string, 0)
 	for _, e := range u.config.Entities {
 		entities = append(entities, fmt.Sprintf("%s:%s", e.ImageName, e.ID))
