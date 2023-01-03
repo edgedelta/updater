@@ -21,7 +21,7 @@ echo "[+] Tags    : $tags"
 echo "[+] Registry: $registry"
 echo "[+] Platform: $platform"
 
-if [[ "$registry" -eq "local" ]]; then
+if [[ "$registry" == "local" ]]; then
     tag=$(ko build --local --platform=$platform --sbom=none --tags $tags -B $GIT_ROOT/cmd/agent-updater)
     docker tag $tag agent-updater:local
 else
