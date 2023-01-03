@@ -3,6 +3,8 @@ package core
 type UpdaterConfig struct {
 	Entities []EntityProperties `yaml:"entities"`
 	API      APIConfig          `yaml:"api"`
+	Log      *LogConfig         `yaml:"log,omitempty"`
+	Metadata map[string]string  `yaml:"-"`
 }
 
 type EntityProperties struct {
@@ -14,8 +16,13 @@ type EntityProperties struct {
 type APIConfig struct {
 	BaseURL           string           `yaml:"base_url"`
 	LatestTagEndpoint EndpointConfig   `yaml:"latest_tag"`
+	MetadataEndpoint  *EndpointConfig  `yaml:"metadata,omitempty"`
 	LogUpload         *LogUploadConfig `yaml:"log_upload,omitempty"`
 	TopLevelAuth      *APIAuth         `yaml:"auth,omitempty"`
+}
+
+type LogConfig struct {
+	CustomTags map[string]string `yaml:"custom_tags,omitempty"`
 }
 
 type LogUploadConfig struct {
@@ -74,4 +81,5 @@ type VersioningServiceClient interface {
 	GetLatestApplicableTag(entityID string) (*LatestTagResponse, error)
 	GetPresignedLogUploadURL(logSize int) (string, error)
 	UploadLogs(lines []any) error
+	GetMetadata() (map[string]string, error)
 }

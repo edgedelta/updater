@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"flag"
-	"fmt"
 	"os"
 	"time"
 
@@ -25,7 +24,7 @@ const (
 func main() {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Error(fmt.Errorf("%v", err), "Main goroutine panicked")
+			log.Error("Main goroutine panicked, err: %v", err)
 		}
 		handleGracefulShutdown()
 	}()
@@ -38,13 +37,14 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to construct new Updater, err: %v", err)
 	}
+	log.SetCustomTags(updater.LogCustomTags())
 	if updater.LogUploaderEnabled() {
 		logUploader = loguploader.New(ctx, "self_log_uploader", updater.APIClient())
 		log.SetWriters(os.Stdout, logUploader.Writer())
 		logUploader.Run()
 	}
 	if err := updater.Run(ctx); err != nil {
-		log.Error(err, "Runtime error")
+		log.Error("Runtime error occured, err: %v", err)
 	}
 }
 

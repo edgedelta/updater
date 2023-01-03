@@ -150,6 +150,40 @@ func (c *Client) UploadLogs(lines []interface{}) error {
 	return nil
 }
 
+func (c *Client) GetMetadata() (map[string]string, error) {
+	url, err := constructURLWithParams(
+		c.conf.BaseURL+c.conf.MetadataEndpoint.Endpoint,
+		c.conf.MetadataEndpoint.Params, nil,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("constructURLWithParams err: %v", err)
+	}
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("http.NewRequest: %v", err)
+	}
+	if c.conf.TopLevelAuth != nil {
+		req.Header.Add(c.conf.TopLevelAuth.HeaderKey, c.conf.TopLevelAuth.HeaderValue)
+	}
+	res, err := c.cl.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("http.Client.Do: %v", err)
+	}
+	defer res.Body.Close()
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, fmt.Errorf("io.ReadAll: %v", err)
+	}
+	if res.StatusCode < 200 || res.StatusCode >= 300 {
+		return nil, fmt.Errorf("status code is not in the expected range (%d), response body: %q", res.StatusCode, string(data))
+	}
+	var r map[string]string
+	if err := json.Unmarshal(data, &r); err != nil {
+		return nil, fmt.Errorf("json.Unmarshall: %v", err)
+	}
+	return r, nil
+}
+
 func constructURLWithParams(base string, params *core.ParamConf, ctxVars map[string]string) (string, error) {
 	u, err := url.Parse(base)
 	if err != nil {
