@@ -33,23 +33,23 @@ func (c *Client) GetLatestApplicableTag(id string) (*core.LatestTagResponse, err
 		c.conf.LatestTagEndpoint.Params, nil,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("constructURLWithParams err: %v", err)
+		return nil, fmt.Errorf("failed to construct URL with params, err: %v", err)
 	}
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("http.NewRequest: %v", err)
+		return nil, fmt.Errorf("failed to create HTTP request, err: %v", err)
 	}
 	if c.conf.TopLevelAuth != nil {
 		req.Header.Add(c.conf.TopLevelAuth.HeaderKey, c.conf.TopLevelAuth.HeaderValue)
 	}
 	res, err := c.cl.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("http.Client.Do: %v", err)
+		return nil, fmt.Errorf("failed to do HTTP request: %v", err)
 	}
 	defer res.Body.Close()
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
-		return nil, fmt.Errorf("io.ReadAll: %v", err)
+		return nil, fmt.Errorf("failed to read response body: %v", err)
 	}
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
 		return nil, fmt.Errorf("status code is not in the expected range (%d), response body: %q", res.StatusCode, string(data))
@@ -70,30 +70,30 @@ func (c *Client) GetPresignedLogUploadURL(logSize int) (string, error) {
 		},
 	)
 	if err != nil {
-		return "", fmt.Errorf("constructURLWithParams: %v", err)
+		return "", fmt.Errorf("failed to construct URL with params, err: %v", err)
 	}
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return "", fmt.Errorf("http.NewRequest: %v", err)
+		return "", fmt.Errorf("failed to create HTTP request, err: %v", err)
 	}
 	if c.conf.TopLevelAuth != nil {
 		req.Header.Add(c.conf.TopLevelAuth.HeaderKey, c.conf.TopLevelAuth.HeaderValue)
 	}
 	res, err := c.cl.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("http.Client.Do: %v", err)
+		return "", fmt.Errorf("failed to do HTTP request: %v", err)
 	}
 	defer res.Body.Close()
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
-		return "", fmt.Errorf("io.ReadAll: %v", err)
+		return "", fmt.Errorf("failed to read response body: %v", err)
 	}
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
 		return "", fmt.Errorf("status code is not in the expected range (%d), response body: %q", res.StatusCode, string(data))
 	}
 	var presignedURL string
 	if err := json.Unmarshal(data, &presignedURL); err != nil {
-		return "", fmt.Errorf("json.Unmarshal: %v", err)
+		return "", fmt.Errorf("failed to decode response body: %v", err)
 	}
 	return presignedURL, nil
 }
@@ -122,27 +122,27 @@ func (c *Client) UploadLogs(lines []interface{}) error {
 	}
 	presignedURL, err := c.GetPresignedLogUploadURL(wr.Len())
 	if err != nil {
-		return fmt.Errorf("api.Client.GetPresignedLogUploadURL: %v", err)
+		return fmt.Errorf("failed to get presigned upload URL: %v", err)
 	}
 	url, err := constructURLWithParams(presignedURL, c.conf.LogUpload.Params, nil)
 	if err != nil {
-		return fmt.Errorf("constructURLWithParams: %v", err)
+		return fmt.Errorf("failed to construct URL with params, err: %v", err)
 	}
 	req, err := http.NewRequest(c.conf.LogUpload.Method, url, wr)
 	if err != nil {
-		return fmt.Errorf("http.NewRequest: %v", err)
+		return fmt.Errorf("failed to create HTTP request, err: %v", err)
 	}
 	if c.conf.TopLevelAuth != nil {
 		req.Header.Add(c.conf.TopLevelAuth.HeaderKey, c.conf.TopLevelAuth.HeaderValue)
 	}
 	res, err := c.cl.Do(req)
 	if err != nil {
-		return fmt.Errorf("http.Client.Do: %v", err)
+		return fmt.Errorf("failed to do HTTP request: %v", err)
 	}
 	defer res.Body.Close()
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
-		return fmt.Errorf("io.ReadAll: %v", err)
+		return fmt.Errorf("failed to read response body: %v", err)
 	}
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
 		return fmt.Errorf("status code is not in the expected range (%d), response body: %q", res.StatusCode, string(data))
