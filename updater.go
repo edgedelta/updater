@@ -243,18 +243,19 @@ func (u *Updater) evaluateMetadataConfigVar(val string) (string, error) {
 }
 
 func (u *Updater) logRunningConfig() {
+	var sb strings.Builder
 	entities := make([]string, 0)
 	for _, e := range u.config.Entities {
 		entities = append(entities, fmt.Sprintf("%s:%s", e.ImageName, e.ID))
 	}
-	l := fmt.Sprintf("Updater is running for entities %s with API base URL: %s, latest tag endpoint: %s, log uploader is", strings.Join(entities, ", "), u.config.API.BaseURL, u.config.API.LatestTagEndpoint.Endpoint)
+	sb.WriteString(fmt.Sprintf("Updater is running for entities %s with API base URL: %s, latest tag endpoint: %s, log uploader is", strings.Join(entities, ", "), u.config.API.BaseURL, u.config.API.LatestTagEndpoint.Endpoint))
 	if u.LogUploaderEnabled() {
-		l += fmt.Sprintf(" enabled with presigned URL endpoint: %s, encoding: %s, and compression: %s.", u.config.API.LogUpload.PresignedUploadURLEndpoint.Endpoint, u.config.API.LogUpload.Encoding.Type, u.config.API.LogUpload.Compression)
+		sb.WriteString(fmt.Sprintf(" enabled with presigned URL endpoint: %s, encoding: %s, and compression: %s.", u.config.API.LogUpload.PresignedUploadURLEndpoint.Endpoint, u.config.API.LogUpload.Encoding.Type, u.config.API.LogUpload.Compression))
 	} else {
-		l += " disabled."
+		sb.WriteString(" disabled.")
 	}
 	if u.config.API.MetadataEndpoint != nil {
-		l += fmt.Sprintf(" Updater metadata: %+v", u.config.Metadata)
+		sb.WriteString(fmt.Sprintf(" Updater metadata: %+v", u.config.Metadata))
 	}
-	log.Debug(l)
+	log.Debug(sb.String())
 }
