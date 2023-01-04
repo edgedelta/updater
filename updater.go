@@ -89,7 +89,10 @@ func (u *Updater) APIClient() *api.Client {
 
 func (u *Updater) LogCustomTags() map[string]string {
 	m := make(map[string]string)
-	for k, v := range u.config.Metadata {
+	if u.config.Log == nil {
+		return m
+	}
+	for k, v := range u.config.Log.CustomTags {
 		m[k] = v
 	}
 	return m
@@ -246,9 +249,12 @@ func (u *Updater) logRunningConfig() {
 	}
 	l := fmt.Sprintf("Updater is running for entities %s with API base URL: %s, latest tag endpoint: %s, log uploader is", strings.Join(entities, ", "), u.config.API.BaseURL, u.config.API.LatestTagEndpoint.Endpoint)
 	if u.LogUploaderEnabled() {
-		l += fmt.Sprintf(" enabled with presigned URL endpoint: %s, encoding: %s, and compression: %s", u.config.API.LogUpload.PresignedUploadURLEndpoint.Endpoint, u.config.API.LogUpload.Encoding.Type, u.config.API.LogUpload.Compression)
+		l += fmt.Sprintf(" enabled with presigned URL endpoint: %s, encoding: %s, and compression: %s.", u.config.API.LogUpload.PresignedUploadURLEndpoint.Endpoint, u.config.API.LogUpload.Encoding.Type, u.config.API.LogUpload.Compression)
 	} else {
-		l += " disabled"
+		l += " disabled."
+	}
+	if u.config.API.MetadataEndpoint != nil {
+		l += fmt.Sprintf(" Updater metadata: %+v", u.config.Metadata)
 	}
 	log.Debug(l)
 }
