@@ -12,14 +12,23 @@ type EntityProperties struct {
 }
 
 type APIConfig struct {
-	BaseURL           string         `yaml:"base_url"`
-	LatestTagEndpoint EndpointConfig `yaml:"latest_tag"`
-	TopLevelAuth      *APIAuth       `yaml:"auth,omitempty"`
+	BaseURL           string           `yaml:"base_url"`
+	LatestTagEndpoint EndpointConfig   `yaml:"latest_tag"`
+	LogUpload         *LogUploadConfig `yaml:"log_upload,omitempty"`
+	TopLevelAuth      *APIAuth         `yaml:"auth,omitempty"`
+}
+
+type LogUploadConfig struct {
+	Enabled                    bool            `yaml:"enabled"`
+	PresignedUploadURLEndpoint EndpointConfig  `yaml:"presigned_upload_url"`
+	Method                     string          `yaml:"method"`
+	Encoding                   *EncodingConfig `yaml:"encoding"`
+	Compression                CompressionType `yaml:"compression,omitempty"`
+	Params                     *ParamConf      `yaml:"params,omitempty"`
 }
 
 type EndpointConfig struct {
 	Endpoint string     `yaml:"endpoint"`
-	Auth     *APIAuth   `yaml:"auth,omitempty"`
 	Params   *ParamConf `yaml:"params,omitempty"`
 }
 
@@ -30,8 +39,30 @@ type APIAuth struct {
 
 type ParamConf struct {
 	QueryParams map[string]string `yaml:"query,omitempty"`
-	PathParams  map[string]string `yaml:"path,omitempty"`
 }
+
+type EncodingConfig struct {
+	Type EncodingType     `yaml:"type"`
+	Opts *EncodingOptions `yaml:"options,omitempty"`
+}
+
+type EncodingType string
+
+const (
+	EncodingJSON EncodingType = "json"
+	EncodingRaw               = "raw"
+)
+
+type EncodingOptions struct {
+	Delimiter string `yaml:"delimiter,omitempty"`
+}
+
+type CompressionType string
+
+const (
+	CompressionGzip CompressionType = "gzip"
+	CompressionNoOp                 = ""
+)
 
 type LatestTagResponse struct {
 	Tag   string `json:"tag"`
@@ -41,4 +72,6 @@ type LatestTagResponse struct {
 
 type VersioningServiceClient interface {
 	GetLatestApplicableTag(entityID string) (*LatestTagResponse, error)
+	GetPresignedLogUploadURL(logSize int) (string, error)
+	UploadLogs(lines []any) error
 }

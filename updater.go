@@ -11,14 +11,15 @@ import (
 	"github.com/edgedelta/updater/api"
 	"github.com/edgedelta/updater/core"
 	"github.com/edgedelta/updater/k8s"
+	"github.com/edgedelta/updater/log"
 
 	"github.com/go-yaml/yaml"
-	"github.com/rs/zerolog/log"
 	"k8s.io/client-go/rest"
 )
 
 var (
-	confVarRe = regexp.MustCompile(`{{\s*([^{} ]+)\s*}}`)
+	confVarRe                        = regexp.MustCompile(`{{\s*([^{} ]+)\s*}}`)
+	contextualVariableTemplateFormat = `{{ index .Vars "%s" }}`
 )
 
 type Updater struct {
@@ -54,7 +55,6 @@ func NewUpdater(ctx context.Context, configPath string, opts ...NewClientOpt) (*
 		if err != nil {
 			return nil, err
 		}
-		log.Debug().Msgf("Config file %s contents: %s", configPath, string(b))
 		if err := yaml.Unmarshal(b, u.config); err != nil {
 			return nil, err
 		}
@@ -65,13 +65,21 @@ func NewUpdater(ctx context.Context, configPath string, opts ...NewClientOpt) (*
 	}
 	u.k8sCli = cl
 	if err := u.EvaluateConfigVars(ctx); err != nil {
-		return nil, fmt.Errorf("EvaluateConfigVars: %v", err)
+		return nil, fmt.Errorf("updater.Updater.EvaluateConfigVars: %v", err)
 	}
 	if err := u.ValidateEntities(); err != nil {
-		return nil, fmt.Errorf("ValidateEntities: %v", err)
+		return nil, fmt.Errorf("updater.Updater.ValidateEntities: %v", err)
 	}
 	u.apiCli = api.NewClient(&u.config.API)
 	return u, nil
+}
+
+func (u *Updater) APIClient() *api.Client {
+	return u.apiCli.(*api.Client)
+}
+
+func (u *Updater) LogUploaderEnabled() bool {
+	return u.config.API.LogUpload != nil && u.config.API.LogUpload.Enabled
 }
 
 // ValidateEntities function validates the given entities through the rules:
@@ -91,6 +99,7 @@ func (u *Updater) ValidateEntities() error {
 }
 
 func (u *Updater) Run(ctx context.Context) error {
+	u.logRunningConfig()
 	errors := core.NewErrors()
 	for _, entity := range u.config.Entities {
 		res, err := u.apiCli.GetLatestApplicableTag(entity.ID)
@@ -98,7 +107,7 @@ func (u *Updater) Run(ctx context.Context) error {
 			errors.Addf("failed to get latest applicable tag from API for entity with ID %s, err: %v", entity.ID, err)
 			continue
 		}
-		log.Info().Msgf("Latest applicable tag from API: %+v", res)
+		log.Info("Latest applicable tag from API: %+v", res)
 		for _, path := range entity.K8sPaths {
 			if err := u.k8sCli.SetResourceKeyValue(ctx, path, res.URL); err != nil {
 				errors.Addf("failed to set K8s resource spec key/value for entity with ID %s (path: %s, value: %s), err: %v", entity.ID, path, res.URL, err)
@@ -132,18 +141,15 @@ func (u *Updater) EvaluateConfigVars(ctx context.Context) (err error) {
 				return
 			}
 		}
-		for k, v := range u.config.API.LatestTagEndpoint.Params.PathParams {
-			if u.config.API.LatestTagEndpoint.Params.QueryParams[k], err = u.evaluateConfigVar(ctx, v); err != nil {
+	}
+	if u.config.API.LogUpload.PresignedUploadURLEndpoint.Endpoint, err = u.evaluateConfigVar(ctx, u.config.API.LogUpload.PresignedUploadURLEndpoint.Endpoint); err != nil {
+		return
+	}
+	if u.config.API.LogUpload.PresignedUploadURLEndpoint.Params != nil {
+		for k, v := range u.config.API.LogUpload.PresignedUploadURLEndpoint.Params.QueryParams {
+			if u.config.API.LogUpload.PresignedUploadURLEndpoint.Params.QueryParams[k], err = u.evaluateConfigVar(ctx, v); err != nil {
 				return
 			}
-		}
-	}
-	if u.config.API.LatestTagEndpoint.Auth != nil {
-		if u.config.API.LatestTagEndpoint.Auth.HeaderKey, err = u.evaluateConfigVar(ctx, u.config.API.LatestTagEndpoint.Auth.HeaderKey); err != nil {
-			return
-		}
-		if u.config.API.LatestTagEndpoint.Auth.HeaderValue, err = u.evaluateConfigVar(ctx, u.config.API.LatestTagEndpoint.Auth.HeaderValue); err != nil {
-			return
 		}
 	}
 	return nil
@@ -158,6 +164,7 @@ func (u *Updater) evaluateConfigVar(ctx context.Context, val string) (string, er
 			elms := strings.Split(path, ".")
 			if len(elms) != 2 {
 				err = fmt.Errorf("path should have pattern: .k8s.<NAMESPACE>.<SECRET-NAME>, got '%s' instead", path)
+				return ""
 			}
 			namespace := elms[0]
 			name := elms[1]
@@ -165,11 +172,32 @@ func (u *Updater) evaluateConfigVar(ctx context.Context, val string) (string, er
 			secret, err = u.k8sCli.GetSecret(ctx, namespace, name)
 			return secret
 		}
-		if strings.HasPrefix(inner, ".env") {
+		if strings.HasPrefix(inner, ".env.") {
 			key := inner[5:] // .env.<KEY>
 			return os.Getenv(key)
+		}
+		if strings.HasPrefix(inner, ".ctx.") {
+			key := inner[5:] // .ctx.<KEY>
+
+			// Replace the contextual variable's key to a Go template map index key to later
+			// use inside the related function(s).
+			return fmt.Sprintf(contextualVariableTemplateFormat, key)
 		}
 		err = fmt.Errorf("config var '%s' starts with an unknown item '%s' (expected '.k8s' or '.env')", s, inner)
 		return ""
 	}), err
+}
+
+func (u *Updater) logRunningConfig() {
+	entities := make([]string, 0)
+	for _, e := range u.config.Entities {
+		entities = append(entities, fmt.Sprintf("%s:%s", e.ImageName, e.ID))
+	}
+	l := fmt.Sprintf("Updater is running for entities %s with API base URL: %s, latest tag endpoint: %s, log uploader is", strings.Join(entities, ", "), u.config.API.BaseURL, u.config.API.LatestTagEndpoint.Endpoint)
+	if u.LogUploaderEnabled() {
+		l += fmt.Sprintf(" enabled with presigned URL endpoint: %s, encoding: %s, and compression: %s", u.config.API.LogUpload.PresignedUploadURLEndpoint.Endpoint, u.config.API.LogUpload.Encoding.Type, u.config.API.LogUpload.Compression)
+	} else {
+		l += " disabled"
+	}
+	log.Debug(l)
 }
