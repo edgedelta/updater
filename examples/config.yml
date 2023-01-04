@@ -19,4 +19,8 @@ api:
         size: '{{ .ctx.size }}'
     presigned_upload_url:
       endpoint: '/get_upload_link'
-  
+log:
+  custom_tags:
+    namespace: '{{ .env.K8S_NAMESPACE }}'
+    os: 'Linux???'
+    some_meta_tag: '{{ .meta.uploader_id }}'

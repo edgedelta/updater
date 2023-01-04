@@ -64,13 +64,22 @@ func NewUpdater(ctx context.Context, configPath string, opts ...NewClientOpt) (*
 		return nil, err
 	}
 	u.k8sCli = cl
-	if err := u.EvaluateConfigVars(ctx); err != nil {
-		return nil, fmt.Errorf("updater.Updater.EvaluateConfigVars: %v", err)
+	if err := u.evaluateConfigVars(ctx); err != nil {
+		return nil, fmt.Errorf("updater.Updater.evaluateConfigVars: %v", err)
 	}
-	if err := u.ValidateEntities(); err != nil {
-		return nil, fmt.Errorf("updater.Updater.ValidateEntities: %v", err)
+	if err := u.validateEntities(); err != nil {
+		return nil, fmt.Errorf("updater.Updater.validateEntities: %v", err)
 	}
 	u.apiCli = api.NewClient(&u.config.API)
+	if u.config.API.MetadataEndpoint != nil {
+		u.config.Metadata, err = u.apiCli.GetMetadata()
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch metadata, err: %v", err)
+		}
+	}
+	if err := u.evaluateMetadataConfigVars(); err != nil {
+		return nil, fmt.Errorf("updater.Updater.evaluateMetadataConfigVars: %v", err)
+	}
 	return u, nil
 }
 
@@ -78,13 +87,24 @@ func (u *Updater) APIClient() *api.Client {
 	return u.apiCli.(*api.Client)
 }
 
+func (u *Updater) LogCustomTags() map[string]string {
+	m := make(map[string]string)
+	if u.config.Log == nil {
+		return m
+	}
+	for k, v := range u.config.Log.CustomTags {
+		m[k] = v
+	}
+	return m
+}
+
 func (u *Updater) LogUploaderEnabled() bool {
 	return u.config.API.LogUpload != nil && u.config.API.LogUpload.Enabled
 }
 
-// ValidateEntities function validates the given entities through the rules:
+// validateEntities function validates the given entities through the rules:
 //   - Each entity ID is unique
-func (u *Updater) ValidateEntities() error {
+func (u *Updater) validateEntities() error {
 	if len(u.config.Entities) == 0 {
 		return errors.New("no entity is defined, need at least 1")
 	}
@@ -118,7 +138,7 @@ func (u *Updater) Run(ctx context.Context) error {
 	return errors.ErrorOrNil()
 }
 
-func (u *Updater) EvaluateConfigVars(ctx context.Context) (err error) {
+func (u *Updater) evaluateConfigVars(ctx context.Context) (err error) {
 	for index, entity := range u.config.Entities {
 		if u.config.Entities[index].ID, err = u.evaluateConfigVar(ctx, entity.ID); err != nil {
 			return
@@ -148,6 +168,13 @@ func (u *Updater) EvaluateConfigVars(ctx context.Context) (err error) {
 	if u.config.API.LogUpload.PresignedUploadURLEndpoint.Params != nil {
 		for k, v := range u.config.API.LogUpload.PresignedUploadURLEndpoint.Params.QueryParams {
 			if u.config.API.LogUpload.PresignedUploadURLEndpoint.Params.QueryParams[k], err = u.evaluateConfigVar(ctx, v); err != nil {
+				return
+			}
+		}
+	}
+	if u.config.Log != nil {
+		for k, v := range u.config.Log.CustomTags {
+			if u.config.Log.CustomTags[k], err = u.evaluateConfigVar(ctx, v); err != nil {
 				return
 			}
 		}
@@ -183,21 +210,52 @@ func (u *Updater) evaluateConfigVar(ctx context.Context, val string) (string, er
 			// use inside the related function(s).
 			return fmt.Sprintf(contextualVariableTemplateFormat, key)
 		}
-		err = fmt.Errorf("config var '%s' starts with an unknown item '%s' (expected '.k8s' or '.env')", s, inner)
-		return ""
+		return s // If unmatching, just return itself
+	}), err
+}
+
+func (u *Updater) evaluateMetadataConfigVars() (err error) {
+	if u.config.Log != nil {
+		for k, v := range u.config.Log.CustomTags {
+			if u.config.Log.CustomTags[k], err = u.evaluateMetadataConfigVar(v); err != nil {
+				return
+			}
+		}
+	}
+	return nil
+}
+
+func (u *Updater) evaluateMetadataConfigVar(val string) (string, error) {
+	var err error
+	return confVarRe.ReplaceAllStringFunc(val, func(s string) string {
+		inner := confVarRe.FindStringSubmatch(s)[1]
+		if strings.HasPrefix(inner, ".meta.") {
+			key := inner[6:] // .meta.<KEY>
+			v, ok := u.config.Metadata[key]
+			if !ok {
+				err = fmt.Errorf("metadata with key %q is not found", key)
+				return ""
+			}
+			return v
+		}
+		return s // If unmatching, just return itself
 	}), err
 }
 
 func (u *Updater) logRunningConfig() {
+	var sb strings.Builder
 	entities := make([]string, 0)
 	for _, e := range u.config.Entities {
 		entities = append(entities, fmt.Sprintf("%s:%s", e.ImageName, e.ID))
 	}
-	l := fmt.Sprintf("Updater is running for entities %s with API base URL: %s, latest tag endpoint: %s, log uploader is", strings.Join(entities, ", "), u.config.API.BaseURL, u.config.API.LatestTagEndpoint.Endpoint)
+	sb.WriteString(fmt.Sprintf("Updater is running for entities %s with API base URL: %s, latest tag endpoint: %s, log uploader is", strings.Join(entities, ", "), u.config.API.BaseURL, u.config.API.LatestTagEndpoint.Endpoint))
 	if u.LogUploaderEnabled() {
-		l += fmt.Sprintf(" enabled with presigned URL endpoint: %s, encoding: %s, and compression: %s", u.config.API.LogUpload.PresignedUploadURLEndpoint.Endpoint, u.config.API.LogUpload.Encoding.Type, u.config.API.LogUpload.Compression)
+		sb.WriteString(fmt.Sprintf(" enabled with presigned URL endpoint: %s, encoding: %s, and compression: %s.", u.config.API.LogUpload.PresignedUploadURLEndpoint.Endpoint, u.config.API.LogUpload.Encoding.Type, u.config.API.LogUpload.Compression))
 	} else {
-		l += " disabled"
+		sb.WriteString(" disabled.")
 	}
-	log.Debug(l)
+	if u.config.API.MetadataEndpoint != nil {
+		sb.WriteString(fmt.Sprintf(" Updater metadata: %+v", u.config.Metadata))
+	}
+	log.Debug(sb.String())
 }
