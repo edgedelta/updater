@@ -179,7 +179,7 @@ func (c *Client) GetMetadata() (map[string]string, error) {
 	}
 	var r map[string]string
 	if err := json.Unmarshal(data, &r); err != nil {
-		return nil, fmt.Errorf("json.Unmarshall: %v", err)
+		return nil, fmt.Errorf("json.Unmarshal: %v", err)
 	}
 	return r, nil
 }
