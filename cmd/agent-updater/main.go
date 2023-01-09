@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"os"
+	"runtime/debug"
 	"time"
 
 	"github.com/edgedelta/updater"
@@ -18,15 +19,18 @@ var (
 )
 
 const (
-	gracefulShutdownPeriod = time.Minute
+	gracefulShutdownPeriod = 2 * time.Minute
 )
 
 func main() {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Error("Main goroutine panicked, err: %v", err)
+			log.Error("Main goroutine panicked, err: %v, stack: %s", err, debug.Stack())
 		}
 		handleGracefulShutdown()
+		if log.ErrorCount() > 0 {
+			os.Exit(1)
+		}
 	}()
 	flag.Parse()
 	if err := validateFlags(); err != nil {
