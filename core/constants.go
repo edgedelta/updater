@@ -4,7 +4,7 @@ type K8sResourceKind string
 
 const (
 	K8sDaemonset  K8sResourceKind = "ds"
-	K8sDeployment                 = "deploy"
+	K8sDeployment K8sResourceKind = "deploy"
 )
 
 var (

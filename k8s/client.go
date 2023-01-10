@@ -60,7 +60,7 @@ func (c *Client) SetResourceKeyValue(ctx context.Context, path core.K8sResourceP
 			return fmt.Errorf("clientset.AppsV1.DaemonSets.Get: %v", err)
 		}
 		if ds == nil {
-			return fmt.Errorf("no DaemonSet exists with name %q in namespace %q", res.Name, res.Namespace)
+			return fmt.Errorf("no DaemonSet exists with name: %q, namespace: %q", res.Name, res.Namespace)
 		}
 		fieldSelectorPath := strings.Split(res.UpdateKeyPath, ".")
 		old, updated, err := CompareAndUpdateStructField(ds, fieldSelectorPath, updateValue)
@@ -83,7 +83,7 @@ func (c *Client) SetResourceKeyValue(ctx context.Context, path core.K8sResourceP
 			return fmt.Errorf("clientset.AppsV1.Deployments.Get: %v", err)
 		}
 		if deploy == nil {
-			return fmt.Errorf("no Deployment exists with name %q in namespace %q", res.Name, res.Namespace)
+			return fmt.Errorf("no Deployment exists with name: %q, namespace: %q", res.Name, res.Namespace)
 		}
 		fieldSelectorPath := strings.Split(res.UpdateKeyPath, ".")
 		old, updated, err := CompareAndUpdateStructField(deploy, fieldSelectorPath, updateValue)
