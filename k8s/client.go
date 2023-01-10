@@ -45,10 +45,6 @@ func NewClient(opts ...NewClientOpt) (*Client, error) {
 	return cli, nil
 }
 
-func (c *Client) Info() {
-
-}
-
 func (c *Client) SetResourceKeyValue(ctx context.Context, path core.K8sResourcePath, updateValue string) error {
 	res, err := path.Parse()
 	if err != nil {
@@ -64,7 +60,7 @@ func (c *Client) SetResourceKeyValue(ctx context.Context, path core.K8sResourceP
 			return fmt.Errorf("clientset.AppsV1.DaemonSets.Get: %v", err)
 		}
 		if ds == nil {
-			return fmt.Errorf("no DaemonSet exists with name %q in namespace %q", res.Name, res.Namespace)
+			return fmt.Errorf("no DaemonSet exists with name: %q, namespace: %q", res.Name, res.Namespace)
 		}
 		fieldSelectorPath := strings.Split(res.UpdateKeyPath, ".")
 		old, updated, err := CompareAndUpdateStructField(ds, fieldSelectorPath, updateValue)
@@ -79,6 +75,29 @@ func (c *Client) SetResourceKeyValue(ctx context.Context, path core.K8sResourceP
 		_, err = c.clientset.AppsV1().DaemonSets(res.Namespace).Update(ctx, ds, v1.UpdateOptions{})
 		if err != nil {
 			return fmt.Errorf("clientset.AppsV1.DaemonSets.Update: %v", err)
+		}
+		log.Info("Updated version of resource with path %s to %s", path, updateValue)
+	case core.K8sDeployment:
+		deploy, err := c.clientset.AppsV1().Deployments(res.Namespace).Get(ctx, res.Name, v1.GetOptions{})
+		if err != nil {
+			return fmt.Errorf("clientset.AppsV1.Deployments.Get: %v", err)
+		}
+		if deploy == nil {
+			return fmt.Errorf("no Deployment exists with name: %q, namespace: %q", res.Name, res.Namespace)
+		}
+		fieldSelectorPath := strings.Split(res.UpdateKeyPath, ".")
+		old, updated, err := CompareAndUpdateStructField(deploy, fieldSelectorPath, updateValue)
+		if err != nil {
+			return fmt.Errorf("k8s.CompareAndUpdateStructField: %v", err)
+		}
+		log.Info("Current deployment image version is %s", old)
+		if !updated {
+			log.Info("Passing version update of resource with path %s to %s, older version is the same as the new one", path, updateValue)
+			return nil
+		}
+		_, err = c.clientset.AppsV1().Deployments(res.Namespace).Update(ctx, deploy, v1.UpdateOptions{})
+		if err != nil {
+			return fmt.Errorf("clientset.AppsV1.Deployments.Update: %v", err)
 		}
 		log.Info("Updated version of resource with path %s to %s", path, updateValue)
 	default:
