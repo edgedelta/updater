@@ -19,7 +19,7 @@ var (
 )
 
 const (
-	gracefulShutdownPeriod = 2 * time.Minute
+	gracefulShutdownPeriod = time.Minute
 )
 
 func main() {
