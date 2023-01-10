@@ -11,12 +11,15 @@ import (
 var (
 	logger     atomic.Pointer[zerolog.Logger]
 	customTags atomic.Pointer[map[string]string]
+	errCount   int32
 )
 
 func init() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnixNano
 	zerolog.TimestampFieldName = "timestamp"
 	zerolog.MessageFieldName = "raw"
+
+	errCount = 0
 
 	logger.Store(newLogger(os.Stdout))
 	customTags.Store(&map[string]string{})
@@ -61,6 +64,7 @@ func Error(format string, args ...any) {
 		l.Str(k, v)
 	}
 	l.Msgf(format, args...)
+	atomic.AddInt32(&errCount, 1)
 }
 
 func Fatal(format string, args ...any) {
@@ -69,6 +73,10 @@ func Fatal(format string, args ...any) {
 		l.Str(k, v)
 	}
 	l.Msgf(format, args...)
+}
+
+func ErrorCount() int32 {
+	return atomic.LoadInt32(&errCount)
 }
 
 func newLogger(wrs ...io.Writer) *zerolog.Logger {
