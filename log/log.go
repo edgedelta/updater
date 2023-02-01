@@ -15,7 +15,7 @@ var (
 )
 
 func init() {
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnixNano
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnixMs
 	zerolog.TimestampFieldName = "timestamp"
 	zerolog.MessageFieldName = "raw"
 
