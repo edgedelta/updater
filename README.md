@@ -1,31 +1,106 @@
 # Edge Delta Agent Updater
 
-## Local deployment
+Agent updater is a configurable minimal program that helps with updating your Kubernetes resources. It is designed to be used to update daemonset and deployment images, but can be used to update any spec property of these resources.
 
-1. Install minikube
-2. Install the Edge Delta agent to Minikube
-3. Run the test API:
+## Usage
 
-```bash
-go run test/api/main.go
+### Configuration
+
+The updater can be configured using a YAML configuration file. The configuration file can be passed to the updater using the `--config` flag. The configuration file defines the resources to be updated, the API to be used to fetch the latest version, and the logging configuration.
+
+#### Entities
+
+Entities are the resources to be updated. The updater supports updating the following Kubernetes resources:
+
+- DaemonSet
+- Deployment
+
+Entities are defined under the `entities` list in the configuration file. The following is an example of a configuration file with two entities:
+
+```yaml
+entities:
+- id: 111-222-333
+  image: some-agent
+  paths:
+  - default:ds/my-agent:spec.template.spec.containers[0].image
+- id: 444-555-666
+  image: some-other-agent
+  paths:
+  - default:ds/my-other-agent:spec.template.spec.containers[0].image
 ```
 
-4. Run the command(s) below to build and deploy OR just deploy the agent updater:
+| Property | Type | Description | Required |
+| ---| --- | --- | --- |
+| `id` | `string` | Unique ID of the resource | Yes |
+| `image` | `string` | Resource's image kind | Yes |
+| `paths` | `[]string` | K8s object paths of the properties to be updated | Yes |
 
-    a. To deploy the latest:
-   
-    ```bash
-    ./deploy/scripts/deploy.sh public.ecr.aws/v4z2v9g0/edgedelta-development:updater-linux-arm64-local "http://host.minikube.internal:8080" "/"
-    ```
 
-    b. To build and deploy for local:
+#### API
 
-    ```bash
-    ED_MODE=local ./deploy/scripts/build_and_deploy.sh
-    ```
+The API is used to fetch the latest version of the resource. The updater supports HTTP REST APIs. The API interface is defined with the following Go interface:
 
-After deployment, you should see a message similar to the one below:
+```go
+type VersioningServiceClient interface {
+	GetLatestApplicableTag(entityID string) (*LatestTagResponse, error)
+	GetPresignedLogUploadURL(logSize int) (string, error)
+	UploadLogs(lines []any) error
+	GetMetadata() (map[string]string, error)
+}
+```
 
-```json
-{"level":"info","time":"2022-11-25T10:56:07Z","message":"Updated version of resource with path edgedelta:ds/edgedelta:spec.template.spec.containers[0].image to gcr.io/edgedelta/agent:v0.1.47"}
+The API is defined under the `api` section in the configuration file. The following is an example API configuration:
+
+```yaml
+api:
+  base_url: http://localhost:8080
+  auth:
+    header_key: Authorization
+    header_value: 'Some_token'
+  latest_tag:
+    endpoint: /latest-version
+  metadata:
+    endpoint: /metadata
+  log_upload:
+    enabled: true
+    method: PUT
+    encoding:
+      type: raw
+      options:
+        delimiter: '\n'
+    compression: gzip
+    presigned_upload_url:
+      endpoint: /log-upload-link
+      params:
+        query:
+          size: '{{ .ctx.size }}'
+          format: json
+          compression: gzip
+```
+
+| Property | Type | Description | Required |
+| ---| --- | --- | --- |
+| `base_url` | `string` | Base URL of the API | Yes |
+| `auth` | `APIAuth` | Authentication configuration | No |
+| `latest_tag` | `EndpointConfig` | Configuration for fetching the latest version | Yes |
+| `metadata` | `EndpointConfig` | Configuration for fetching the metadata | Yes |
+| `log_upload` | `LogUploadConfig` | Configuration for uploading logs | No |
+
+### Installation
+
+The updater can be deployed to a Kubernetes cluster using the latest image from the public Google Container Registry.
+
+1. Replace the `data.updater-config.yml` under the `examples/cronjob.yml` with your configuration file content.
+2. Run the following command to deploy the updater:
+
+```bash
+kubectl apply -f examples/rbac.yml
+kubectl apply -f examples/rolebinding.yml
+kubectl apply -f examples/cronjob.yml
+```
+
+3. To verify that the updater is working, you can check the logs of the updater pod:
+
+```bash
+kubectl logs -f updater-<random-id>
 ```

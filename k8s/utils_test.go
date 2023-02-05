@@ -21,21 +21,21 @@ func TestCompareAndUpdateStructField(t *testing.T) {
 	}{
 		{
 			desc:        "Update K8s daemonset image",
-			object:      daemonsetWithImage("gcr.io/edgedelta/agent:v0.1.47"),
+			object:      daemonsetWithImage("gcr.io/my-project/image:v0.1.47"),
 			path:        []string{"spec", "template", "spec", "containers[0]", "image"},
-			updateValue: "gcr.io/edgedelta/agent:v0.1.49",
+			updateValue: "gcr.io/my-project/image:v0.1.49",
 			wantUpdated: true,
-			wantObject:  daemonsetWithImage("gcr.io/edgedelta/agent:v0.1.49"),
-			wantOld:     "gcr.io/edgedelta/agent:v0.1.47",
+			wantObject:  daemonsetWithImage("gcr.io/my-project/image:v0.1.49"),
+			wantOld:     "gcr.io/my-project/image:v0.1.47",
 		},
 		{
 			desc:        "No update K8s daemonset image",
-			object:      daemonsetWithImage("gcr.io/edgedelta/agent:v0.1.47"),
+			object:      daemonsetWithImage("gcr.io/my-project/image:v0.1.47"),
 			path:        []string{"spec", "template", "spec", "containers[0]", "image"},
-			updateValue: "gcr.io/edgedelta/agent:v0.1.47",
+			updateValue: "gcr.io/my-project/image:v0.1.47",
 			wantUpdated: false,
-			wantObject:  daemonsetWithImage("gcr.io/edgedelta/agent:v0.1.47"),
-			wantOld:     "gcr.io/edgedelta/agent:v0.1.47",
+			wantObject:  daemonsetWithImage("gcr.io/my-project/image:v0.1.47"),
+			wantOld:     "gcr.io/my-project/image:v0.1.47",
 		},
 	}
 	for _, tc := range tests {
@@ -60,9 +60,8 @@ func TestCompareAndUpdateStructField(t *testing.T) {
 func daemonsetWithImage(image string) *appsv1.DaemonSet {
 	return &appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            "edgedelta",
-			Namespace:       "edgedelta",
-			UID:             "ef61b019-aaaa-bbbb-cccc-2ddd26e1dbca",
+			Name:            "my-daemonset",
+			Namespace:       "my-daemonset",
 			ResourceVersion: "231953",
 		},
 		Spec: appsv1.DaemonSetSpec{
@@ -70,15 +69,15 @@ func daemonsetWithImage(image string) *appsv1.DaemonSet {
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{
 						{
-							Command: []string{"/bin/edgedelta"},
+							Command: []string{"/bin/bash"},
 							Env: []v1.EnvVar{
 								{
-									Name: "ED_API_KEY",
+									Name: "API_KEY",
 									ValueFrom: &v1.EnvVarSource{
 										SecretKeyRef: &v1.SecretKeySelector{
-											Key: "ed-api-key",
+											Key: "api-key",
 											LocalObjectReference: v1.LocalObjectReference{
-												Name: "ed-api-key",
+												Name: "api-key",
 											},
 										},
 									},
@@ -86,7 +85,7 @@ func daemonsetWithImage(image string) *appsv1.DaemonSet {
 							},
 							Image:           image,
 							ImagePullPolicy: v1.PullAlways,
-							Name:            "edgedelta",
+							Name:            "my_container",
 						},
 					},
 				},
