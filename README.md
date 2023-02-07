@@ -4,6 +4,22 @@ Agent updater is a configurable minimal program that helps with updating your Ku
 
 ## Usage
 
+### Image
+
+The latest updater image can be found in the public Google Container Registry: `gcr.io/edgedelta/agent-updater:latest`.
+
+You can also build the image yourself using `ko`. Ko is a simple container image builder for Go applications. To install `ko`, run the following command:
+
+```bash
+go install github.com/google/ko@latest
+```
+
+To build the image, run the following command:
+
+```bash
+ko build --local --platform=all -B ./cmd/agent-updater
+```
+
 ### Configuration
 
 The updater can be configured using a YAML configuration file. The configuration file can be passed to the updater using the `--config` flag. The configuration file defines the resources to be updated, the API to be used to fetch the latest version, and the logging configuration.
