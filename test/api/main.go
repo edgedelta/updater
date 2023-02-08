@@ -12,8 +12,8 @@ import (
 var (
 	responseData = core.LatestTagResponse{
 		Tag:   "v0.1.47",
-		Image: "edgedelta",
-		URL:   "gcr.io/edgedelta/agent:v0.1.47",
+		Image: "my-image",
+		URL:   "gcr.io/my-org/image:v0.1.47",
 	}
 )
 

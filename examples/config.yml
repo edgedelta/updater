@@ -1,26 +1,32 @@
 entities:
-- id: '{{ .k8s.secrets.edgedelta.ed-api-key }}'
-  image: edgedelta
+- id: 111-222-333
+  image: some-agent
   paths:
-  - edgedelta:ds/edgedelta:spec.template.spec.containers[0].image
-api:
-  base_url: '{{ .env.ED_API_URL }}'
-  latest_tag:
-    endpoint: '{{ .env.ED_LATEST_TAG_ENDPOINT }}'
-    auth:
-      header_key: X-ED-Config-Id
-      header_value: '{{ .k8s.secrets.edgedelta.ed-api-key }}'
-  log_upload:
-    method: PUSH
-    encoding: json
-    compression: gzip
-    params:
-      query:
-        size: '{{ .ctx.size }}'
-    presigned_upload_url:
-      endpoint: '/get_upload_link'
+  - default:ds/my-agent:spec.template.spec.containers[0].image
 log:
   custom_tags:
-    namespace: '{{ .env.K8S_NAMESPACE }}'
-    os: 'Linux???'
-    some_meta_tag: '{{ .meta.uploader_id }}'
+    host: '{{ .env.KUBE_POD }}'
+api:
+  base_url: http://localhost:8080
+  auth:
+    header_key: Authorization
+    header_value: 'Some_token'
+  latest_tag:
+    endpoint: /latest-version
+  metadata:
+    endpoint: /metadata
+  log_upload:
+    enabled: true
+    method: PUT
+    encoding:
+      type: raw
+      options:
+        delimiter: '\n'
+    compression: gzip
+    presigned_upload_url:
+      endpoint: /log-upload-link
+      params:
+        query:
+          size: '{{ .ctx.size }}'
+          format: json
+          compression: gzip

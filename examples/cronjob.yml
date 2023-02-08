@@ -1,0 +1,49 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: updater
+  namespace: default
+spec:
+  schedule: "*/10 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: updater-container
+            image: gcr.io/edgedelta/agent-updater:latest
+            imagePullPolicy: Always
+            command:
+            - /ko-app/agent-updater
+            - --config
+            - /var/config/updater-config.yml
+            volumeMounts:
+              - name: config-volume
+                mountPath: /var/config
+            env:
+            - name: KUBE_NODE
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: KUBE_POD
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: KUBE_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          restartPolicy: Never
+          volumes:
+          - name: config-volume
+            configMap:
+              name: updater-configmap
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: updater-configmap
+  namespace: default
+data:
+  updater-config.yml: |-
+    <INSERT-CONFIG-HERE>

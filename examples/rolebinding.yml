@@ -2,10 +2,10 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: agent-updater-role-binding
-  namespace: edgedelta
+  namespace: default
 subjects:
 - kind: User
-  name: "system:serviceaccount:edgedelta:default"
+  name: "system:serviceaccount:default:default"
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: Role

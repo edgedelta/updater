@@ -22,8 +22,8 @@ echo "[+] Registry: $registry"
 echo "[+] Platform: $platform"
 
 if [[ "$registry" == "local" ]]; then
-    tag=$(ko build --local --platform=$platform --sbom=none --tags $tags -B $GIT_ROOT/cmd/agent-updater)
+    tag=$(ko build --local --platform=$platform --tags $tags -B $GIT_ROOT/cmd/agent-updater)
     docker tag $tag agent-updater:local
 else
-    KO_DOCKER_REPO=$registry ko build --platform=$platform --sbom=none --tags $tags -B $GIT_ROOT/cmd/agent-updater
+    KO_DOCKER_REPO=$registry ko build --platform=$platform --tags $tags -B $GIT_ROOT/cmd/agent-updater
 fi
