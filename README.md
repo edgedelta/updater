@@ -8,7 +8,11 @@ Agent updater is a configurable minimal program that helps with updating your Ku
 
 The latest updater image can be found in the public Google Container Registry: `gcr.io/edgedelta/agent-updater:latest`.
 
-You can also build the image yourself using `ko`. Ko is a simple container image builder for Go applications. To install `ko`, run the following command:
+You can also build the image yourself with several options.
+
+#### Ko 
+
+Ko is a simple container image builder for Go applications. To install `ko`, run the following command:
 
 ```bash
 go install github.com/google/ko@latest
@@ -18,6 +22,14 @@ To build the image, run the following command:
 
 ```bash
 ko build --local --platform=all -B ./cmd/agent-updater
+```
+
+#### Docker
+
+To build the image using Docker, you can use the `Dockerfile` under the root directory. To build the image, run the following command:
+
+```bash
+docker build . -t edgedelta/agent-updater:latest
 ```
 
 ### Configuration
@@ -54,16 +66,7 @@ entities:
 
 #### API
 
-The API is used to fetch the latest version of the resource. The updater supports HTTP REST APIs. The API interface is defined with the following Go interface:
-
-```go
-type VersioningServiceClient interface {
-	GetLatestApplicableTag(entityID string) (*LatestTagResponse, error)
-	GetPresignedLogUploadURL(logSize int) (string, error)
-	UploadLogs(lines []any) error
-	GetMetadata() (map[string]string, error)
-}
-```
+The API is used to fetch the latest version of the resource. The updater supports HTTP REST APIs.
 
 The API is defined under the `api` section in the configuration file. The following is an example API configuration:
 
@@ -110,9 +113,8 @@ The updater can be deployed to a Kubernetes cluster using the latest image from 
 2. Run the following command to deploy the updater:
 
 ```bash
-kubectl apply -f examples/rbac.yml
-kubectl apply -f examples/rolebinding.yml
-kubectl apply -f examples/cronjob.yml
+chmod +x ./examples/deploy.sh
+./examples/deploy.sh
 ```
 
 3. To verify that the updater is working, you can check the logs of the updater pod:
