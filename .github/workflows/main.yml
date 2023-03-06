@@ -2,8 +2,6 @@ name: Test and deploy
 
 on:
   push:
-    branches:
-      - ozansz/actions
     tags:
       - 'v*.*.*'
     
@@ -20,4 +18,8 @@ jobs:
         run: go test -v ./...
       - name: Deploy
         run: |
-          echo "Current tag: ${{  github.ref_name }}"
+          build_tag="${{  github.ref_name }}"
+          if [[ "$build_tag" != *-alpha ]]; then
+            build_tag += ",latest"
+          fi
+          ./deploy/scripts/build.sh "$build_tag" gcr.io/edgedelta all
