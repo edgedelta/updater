@@ -24,7 +24,7 @@ jobs:
           password: ${{ secrets.GCR_JSON_KEY }}
       - name: Release
         run: |
-          build_tag="${{  github.ref_name }}"
+          build_tag="${{ github.ref_name }}"
           if [[ "$build_tag" != *-alpha ]]; then
             build_tag += ",latest"
           fi
