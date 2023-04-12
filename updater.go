@@ -127,7 +127,7 @@ func (u *Updater) Run(ctx context.Context) error {
 			errors.Addf("failed to get latest applicable tag from API for entity with ID %s, err: %v", entity.ID, err)
 			continue
 		}
-		if res == nil {
+		if res.Tag == "" {
 			log.Info("No applicable tag found for entity with ID %s", entity.ID)
 			continue
 		}

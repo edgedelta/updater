@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"github.com/edgedelta/updater/core"
 	"github.com/edgedelta/updater/core/compressors"
@@ -54,9 +53,6 @@ func (c *Client) GetLatestApplicableTag(id string) (*core.LatestTagResponse, err
 	}
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
 		return nil, fmt.Errorf("status code is not in the expected range (%d), response body: %q", res.StatusCode, string(data))
-	}
-	if strings.TrimSpace(string(data)) == "null" {
-		return nil, nil
 	}
 	var r core.LatestTagResponse
 	if err := json.Unmarshal(data, &r); err != nil {
