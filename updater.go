@@ -127,6 +127,10 @@ func (u *Updater) Run(ctx context.Context) error {
 			errors.Addf("failed to get latest applicable tag from API for entity with ID %s, err: %v", entity.ID, err)
 			continue
 		}
+		if res.Tag == "" {
+			log.Info("No applicable tag found for entity with ID %s", entity.ID)
+			continue
+		}
 		log.Info("Latest applicable tag from API: %+v", res)
 		for _, path := range entity.K8sPaths {
 			if err := u.k8sCli.SetResourceKeyValue(ctx, path, res.URL); err != nil {
