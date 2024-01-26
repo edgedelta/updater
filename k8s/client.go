@@ -77,6 +77,29 @@ func (c *Client) SetResourceKeyValue(ctx context.Context, path core.K8sResourceP
 			return fmt.Errorf("clientset.AppsV1.DaemonSets.Update: %v", err)
 		}
 		log.Info("Updated version of resource with path %s to %s", path, updateValue)
+	case core.K8sStatefulset:
+		sts, err := c.clientset.AppsV1().StatefulSets(res.Namespace).Get(ctx, res.Name, v1.GetOptions{})
+		if err != nil {
+			return fmt.Errorf("clientset.AppsV1.StatefulSets.Get: %v", err)
+		}
+		if sts == nil {
+			return fmt.Errorf("no StatefulSet exists with name: %q, namespace: %q", res.Name, res.Namespace)
+		}
+		fieldSelectorPath := strings.Split(res.UpdateKeyPath, ".")
+		old, updated, err := CompareAndUpdateStructField(sts, fieldSelectorPath, updateValue)
+		if err != nil {
+			return fmt.Errorf("k8s.CompareAndUpdateStructField: %v", err)
+		}
+		log.Info("Current statefulset image version is %s", old)
+		if !updated {
+			log.Info("Passing version update of resource with path %s to %s, older version is the same as the new one", path, updateValue)
+			return nil
+		}
+		_, err = c.clientset.AppsV1().StatefulSets(res.Namespace).Update(ctx, sts, v1.UpdateOptions{})
+		if err != nil {
+			return fmt.Errorf("clientset.AppsV1.StatefulSets.Update: %v", err)
+		}
+		log.Info("Updated version of resource with path %s to %s", path, updateValue)
 	case core.K8sDeployment:
 		deploy, err := c.clientset.AppsV1().Deployments(res.Namespace).Get(ctx, res.Name, v1.GetOptions{})
 		if err != nil {
