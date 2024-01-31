@@ -26,6 +26,6 @@ jobs:
         run: |
           build_tag="${{ github.ref_name }}"
           if [[ "$build_tag" != *-alpha ]]; then
-            build_tag += ",latest"
+            build_tag+= ",latest"
           fi
           ./deploy/scripts/build.sh "$build_tag" gcr.io/edgedelta all
