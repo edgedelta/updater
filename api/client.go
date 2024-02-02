@@ -27,11 +27,20 @@ func NewClient(conf *core.APIConfig) *Client {
 	return &Client{cl: cl, conf: conf}
 }
 
-func (c *Client) GetLatestApplicableTag(id string) (*core.LatestTagResponse, error) {
-	url, err := constructURLWithParams(
-		c.conf.BaseURL+c.conf.LatestTagEndpoint.Endpoint,
-		c.conf.LatestTagEndpoint.Params, nil,
-	)
+func (c *Client) GetLatestApplicableTag(id, name string) (*core.LatestTagResponse, error) {
+	params := &core.ParamConf{
+		QueryParams: map[string]string{
+			"entity": name,
+		},
+	}
+	if c.conf.LatestTagEndpoint.Params != nil {
+		for k, v := range c.conf.LatestTagEndpoint.Params.QueryParams {
+			params.QueryParams[k] = v
+		}
+	}
+
+	apiURL := fmt.Sprintf("%s%s", c.conf.BaseURL, c.conf.LatestTagEndpoint.Endpoint)
+	url, err := constructURLWithParams(apiURL, params, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to construct URL with params, err: %v", err)
 	}

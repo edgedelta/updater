@@ -122,7 +122,7 @@ func (u *Updater) Run(ctx context.Context) error {
 	u.logRunningConfig()
 	errors := core.NewErrors()
 	for _, entity := range u.config.Entities {
-		res, err := u.apiCli.GetLatestApplicableTag(entity.ID)
+		res, err := u.apiCli.GetLatestApplicableTag(entity.ID, entity.ImageName)
 		if err != nil {
 			errors.Addf("failed to get latest applicable tag from API for entity with ID %s, err: %v", entity.ID, err)
 			continue

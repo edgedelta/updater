@@ -78,7 +78,7 @@ type LatestTagResponse struct {
 }
 
 type VersioningServiceClient interface {
-	GetLatestApplicableTag(entityID string) (*LatestTagResponse, error)
+	GetLatestApplicableTag(entityID, entityName string) (*LatestTagResponse, error)
 	GetPresignedLogUploadURL(logSize int) (string, error)
 	UploadLogs(lines []any) error
 	GetMetadata() (map[string]string, error)
